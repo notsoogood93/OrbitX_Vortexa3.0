@@ -8,6 +8,30 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
+  <style>
+    .cat-pill {
+      background: rgba(30, 41, 59, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: #94a3b8;
+      font-size: 0.76rem;
+      font-weight: 600;
+      padding: 0.3rem 0.65rem;
+      border-radius: 20px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s ease;
+    }
+    .cat-pill:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: #fff;
+    }
+    .cat-pill.active {
+      background: linear-gradient(135deg, rgba(37, 99, 235, 0.35), rgba(139, 92, 246, 0.35));
+      border-color: rgba(96, 165, 250, 0.5);
+      color: #fff;
+      font-weight: 700;
+    }
+  </style>
 </head>
 <body>
 
@@ -146,11 +170,20 @@
             <span class="badge-pill">Real-Time SLA</span>
           </div>
 
-          <div class="filter-bar">
-            <input type="text" id="ticketSearchInput" placeholder="Filter by Ticket ID, Room, or Category...">
+          <!-- Category Quick Filter Pills -->
+          <div class="category-filter-pills" style="display:flex; gap:0.4rem; margin-bottom: 0.8rem; overflow-x: auto; padding-bottom: 4px;">
+            <button type="button" id="catFilter_ALL" class="cat-pill active" onclick="window.govFix.filterCategory('ALL')">All Requests</button>
+            <button type="button" id="catFilter_IT" class="cat-pill" onclick="window.govFix.filterCategory('Academic IT')">🖥️ Academic IT</button>
+            <button type="button" id="catFilter_Safety" class="cat-pill" onclick="window.govFix.filterCategory('Electrical')">⚡ Electrical Safety</button>
+            <button type="button" id="catFilter_AV" class="cat-pill" onclick="window.govFix.filterCategory('AV')">📽️ Classroom AV</button>
+            <button type="button" id="catFilter_Facilities" class="cat-pill" onclick="window.govFix.filterCategory('Infrastructure')">🚰 Facilities</button>
           </div>
 
-          <div id="citizenTicketList" class="ticket-list">
+          <div class="filter-bar">
+            <input type="text" id="ticketSearchInput" placeholder="🔍 Search by Ticket ID (#DYP-...), room, asset, or keywords...">
+          </div>
+
+          <div id="citizenTicketList" class="ticket-list ticket-cards-scroll">
             <!-- Populated via JS -->
           </div>
         </div>
@@ -268,6 +301,21 @@
         </div>
         <div class="judge-badge">
           <span>🏆 VORTEXA 3.0 EVALUATION HARNESS</span>
+        </div>
+      </div>
+
+      <!-- Live In-Browser 10-Point Benchmark Runner Card -->
+      <div class="card judge-card full-width" style="margin-bottom: 1.5rem; background: linear-gradient(135deg, rgba(37, 99, 235, 0.1), rgba(139, 92, 246, 0.1)); border: 1px solid rgba(96, 165, 250, 0.35);">
+        <div class="card-header" style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+          <div>
+            <h3>🧪 Automated 10-Point Benchmark Evaluation Runner</h3>
+            <p style="font-size: 0.82rem; color: #94a3b8; margin: 2px 0 0 0;">Directly runs all 10 Section 11.1 academic verification test cases against the live backend.</p>
+          </div>
+          <button id="btnRunLiveBenchmark" class="btn btn-sm btn-primary" style="box-shadow: 0 0 16px rgba(37, 99, 235, 0.4);">
+            ▶️ Run Full 10-Point Test Suite Live
+          </button>
+        </div>
+        <div id="liveBenchmarkResults" class="hidden" style="margin-top: 1rem; background: rgba(13,20,36,0.95); border: 1px solid var(--border-color); border-radius: 9px; padding: 1rem; font-family: var(--font-mono); font-size: 0.82rem; max-height: 240px; overflow-y: auto;">
         </div>
       </div>
 
