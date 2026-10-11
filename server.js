@@ -238,6 +238,8 @@ function processTransition(req, res, targetState, actor, role, payload = {}) {
   }
   if (payload?.workNotes) ticket.workNotes = payload.workNotes;
   if (payload?.inspectionNotes) ticket.inspectionNotes = payload.inspectionNotes;
+  if (payload?.evidenceAttachment) ticket.evidenceAttachment = payload.evidenceAttachment;
+  if (payload?.evidence) ticket.evidenceAttachment = payload.evidence;
   if (payload?.category) ticket.category = payload.category;
   if (payload?.urgency) {
     ticket.urgency = payload.urgency;
@@ -298,13 +300,36 @@ app.post('/api/assignments/:id/decision', (req, res) => {
   });
 });
 
-// 3. Propose Closure
+// 3. Propose Closure & Evidence Attachment
 app.post('/api/requests/:id/closure-proposal', (req, res) => {
-  const { workNotes, evidence, actor } = req.body;
+  const { workNotes, evidence, evidenceAttachment, actor } = req.body;
+  const attachment = evidenceAttachment || evidence;
+  const notes = workNotes || (attachment && attachment.notes) || (typeof evidence === 'string' ? evidence : 'Physical repair verified & completed');
   processTransition(req, res, STATES.READY_FOR_CLOSURE, actor || 'OFFICER', ROLES.OFFICER, {
-    workNotes: workNotes || evidence,
+    workNotes: notes,
+    evidenceAttachment: attachment,
+    evidence: attachment,
   });
 });
+
+app.post('/api/requests/:id/evidence', (req, res) => {
+  const { evidence, evidenceAttachment, workNotes, actor } = req.body;
+  const attachment = evidenceAttachment || evidence;
+  const ticket = grievances.find((g) => g.id === req.params.id);
+  if (!ticket) return res.status(404).json({ success: false, error: 'Request not found' });
+  ticket.evidenceAttachment = attachment;
+  if (workNotes) ticket.workNotes = workNotes;
+  ticket.updatedAt = slaManager.getCurrentTime().toISOString();
+  auditLedger.logEvent({
+    eventType: 'EVIDENCE_ATTACHED',
+    actor: actor || 'TECH_OFFICER',
+    role: ROLES.OFFICER,
+    grievanceId: ticket.id,
+    details: { attachment, workNotes },
+  });
+  return res.json({ success: true, ticket });
+});
+
 
 // 4. Closure Decision (Approve / Reject)
 app.post('/api/closures/:id/decision', (req, res) => {

@@ -97,6 +97,16 @@ export const SEED_GRIEVANCES = [
     createdAt: new Date(Date.now() - 32 * 3600 * 1000).toISOString(),
     updatedAt: new Date(Date.now() - 1 * 3600 * 1000).toISOString(),
     workNotes: 'Replaced capacitor on 2HP booster pump. Tested pressure at 3.5 bar across all 4th-floor hostel blocks.',
+    evidenceAttachment: {
+      fileName: 'booster_pump_gauge_3.5bar.jpg',
+      fileSize: '2.4 MB',
+      uploadedAt: new Date(Date.now() - 1 * 3600 * 1000).toISOString(),
+      technician: 'TECH_PLUMBING_03',
+      measurements: 'Water Pressure: 3.5 Bar (Nominal Operating Range)',
+      sha256Checksum: 'a4f91b7e8c32d90e8a72b6c11d33f20a5e8841209b5d8431e7c91a32b901fc4e',
+      iconEmoji: '🚰',
+      notes: 'Replaced 45µF starter capacitor on Kirloskar 2HP booster pump. Checked impeller clearance and bleed valve. Pressure steady at 3.5 bar.',
+    },
     aiRecommendation: {
       category: 'Campus Infrastructure & Maintenance',
       urgency: 'HIGH',
@@ -123,6 +133,16 @@ export const SEED_GRIEVANCES = [
     createdAt: new Date(Date.now() - 22 * 3600 * 1000).toISOString(),
     updatedAt: new Date(Date.now() - 3 * 3600 * 1000).toISOString(),
     inspectionNotes: 'PoE port re-negotiated on core switch. Firmware flashed. Signal strength verified at -52 dBm across reading hall.',
+    evidenceAttachment: {
+      fileName: 'cisco_ap_poe_renegotiation.png',
+      fileSize: '1.8 MB',
+      uploadedAt: new Date(Date.now() - 3 * 3600 * 1000).toISOString(),
+      technician: 'TECH_NETWORKING_02',
+      measurements: 'Signal Strength: -52 dBm (Reading Hall), Ping: 2ms to Gateway',
+      sha256Checksum: 'e28b7c014f33d90a98b172a11b64e52f7a9041289c5e8432a1b91c32b901ac88',
+      iconEmoji: '📶',
+      notes: 'PoE power negotiation verified on Cisco Catalyst 3850 port Gi1/0/14. Signal strength verified across library 2nd floor.',
+    },
     aiRecommendation: {
       category: 'Network & Connectivity',
       urgency: 'STANDARD',

@@ -418,6 +418,84 @@
       </div>
     </section>
 
+    <!-- ========================================================================= -->
+    <!-- EVIDENCE SUBMISSION & INSPECTION MODAL -->
+    <!-- ========================================================================= -->
+    <div id="evidenceModal" class="modal-backdrop hidden">
+      <div class="modal-card">
+        <div class="modal-header">
+          <div>
+            <h3 style="display:flex; align-items:center; gap:0.5rem;">📎 Technician Evidence Submission & Closure Proposal</h3>
+            <p style="font-size: 0.8rem; color: #94a3b8; margin: 3px 0 0 0;">Upload physical repair proof, diagnostic measurements, and work notes before closure.</p>
+          </div>
+          <button type="button" class="modal-close-btn" onclick="window.govFix.closeEvidenceModal()">✕</button>
+        </div>
+
+        <div class="modal-body">
+          <div style="background: rgba(37,99,235,0.08); border: 1px solid rgba(96,165,250,0.25); border-radius: 8px; padding: 0.75rem; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <span style="font-size: 0.75rem; color: #94a3b8;">Target Request:</span>
+              <strong id="modalTicketId" style="color: #60a5fa; font-family: var(--font-mono); margin-left: 0.3rem;">#DYP-2026-101</strong>
+            </div>
+            <div>
+              <span style="font-size: 0.75rem; color: #94a3b8;">Location:</span>
+              <strong id="modalTicketRoom" style="color: #fff; margin-left: 0.3rem;">Lab 304</strong>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Field Technician Notes (तपशीलवार दुरुस्ती अहवाल):</label>
+            <textarea id="modalWorkNotes" rows="3" placeholder="Describe the physical work done, components replaced, and tests performed..." required>Replaced burnt 750W SMPS unit with new Corsair Bronze unit. Cleaned GPU heat sink and conducted 2-hour stress benchmark.</textarea>
+          </div>
+
+          <div class="form-group">
+            <label>Diagnostic Measurements & Readings:</label>
+            <input type="text" id="modalMeasurements" placeholder="e.g. Voltage: 230V Nominal, Current: 0.8A, Ping: 2ms, Pressure: 3.5 Bar" value="12V Rail: 12.08V Stable, 5V Rail: 5.02V, Temperature: 48°C Under Load">
+          </div>
+
+          <!-- Quick Sample Evidence Presets -->
+          <div style="margin-bottom: 0.8rem;">
+            <span style="font-size: 0.75rem; font-weight: 700; color: #94a3b8; text-transform: uppercase;">Quick Evidence Presets:</span>
+            <div style="display:flex; flex-wrap:wrap; gap: 0.4rem; margin-top: 0.3rem;">
+              <button type="button" class="preset-btn" onclick="window.govFix.selectSampleEvidence('smps')">📸 SMPS Unit Replaced Photo</button>
+              <button type="button" class="preset-btn" onclick="window.govFix.selectSampleEvidence('voltage')">⚡ High-Voltage Breaker Certificate</button>
+              <button type="button" class="preset-btn" onclick="window.govFix.selectSampleEvidence('hdmi')">📽️ Projector HDMI Color Calibration</button>
+              <button type="button" class="preset-btn" onclick="window.govFix.selectSampleEvidence('pump')">🚰 Water Pump 3.5 Bar Pressure Gauge</button>
+            </div>
+          </div>
+
+          <!-- Drag & Drop / File Input Box -->
+          <div class="upload-dropzone" onclick="document.getElementById('modalFileInput').click()">
+            <input type="file" id="modalFileInput" style="display: none;" onchange="window.govFix.handleFileUpload(event)">
+            <div style="font-size: 1.8rem; margin-bottom: 0.4rem;">📷</div>
+            <div style="font-weight: 600; color: #fff; font-size: 0.88rem;">Drop repair photo here or click to browse</div>
+            <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 2px;">Supported: JPG, PNG, PDF (Max 10 MB) · Automatic SHA-256 Checksumming</div>
+          </div>
+
+          <!-- Active Evidence Preview Box -->
+          <div id="modalEvidencePreview" style="margin-top: 1rem; background: rgba(13,20,36,0.9); border: 1px solid rgba(255,255,255,0.1); border-radius: 9px; padding: 0.85rem; display: flex; align-items: center; gap: 0.85rem;">
+            <div id="previewIcon" style="font-size: 1.8rem; background: rgba(37,99,235,0.15); width: 44px; height: 44px; border-radius: 8px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(96,165,250,0.3);">📸</div>
+            <div style="flex: 1;">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <strong id="previewFileName" style="color: #fff; font-size: 0.85rem;">gpu_smps_replacement_proof.jpg</strong>
+                <span id="previewFileSize" style="font-size: 0.75rem; color: #94a3b8;">1.6 MB</span>
+              </div>
+              <div style="font-size: 0.72rem; color: #60a5fa; font-family: var(--font-mono); margin-top: 3px;">
+                SHA-256: <span id="previewChecksum">c8f12a9e4b77d810a9c8e11a2f3b901a88b...</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer" style="display:flex; justify-content:flex-end; gap: 0.6rem; padding: 1rem 1.4rem; border-top: 1px solid var(--border-color);">
+          <button type="button" class="btn btn-outline" onclick="window.govFix.closeEvidenceModal()">Cancel</button>
+          <button type="button" class="btn btn-success" onclick="window.govFix.submitEvidenceProposal()">
+            🚀 Attach Proof & Propose Closure (READY_FOR_CLOSURE)
+          </button>
+        </div>
+      </div>
+    </div>
+
   </main>
 
   <script src="app.js"></script>
