@@ -3,84 +3,62 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>GovFix — University Service Requests Workflow Engine | Dr. D. Y. Patil Institute of Technology</title>
+  <title>GovFix — University Service Requests Workflow Engine | DY Patil Campus</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
-  <style>
-    .cat-pill {
-      background: rgba(30, 41, 59, 0.7);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      color: #94a3b8;
-      font-size: 0.76rem;
-      font-weight: 600;
-      padding: 0.3rem 0.65rem;
-      border-radius: 20px;
-      cursor: pointer;
-      white-space: nowrap;
-      transition: all 0.2s ease;
-    }
-    .cat-pill:hover {
-      background: rgba(255, 255, 255, 0.08);
-      color: #fff;
-    }
-    .cat-pill.active {
-      background: linear-gradient(135deg, rgba(37, 99, 235, 0.35), rgba(139, 92, 246, 0.35));
-      border-color: rgba(96, 165, 250, 0.5);
-      color: #fff;
-      font-weight: 700;
-    }
-  </style>
 </head>
 <body>
 
   <!-- Top Navigation & Live Time Bar -->
   <header class="navbar">
     <div class="nav-brand">
-      <div class="brand-logo">🎓</div>
+      <div class="brand-badge">GF</div>
       <div>
-        <div class="brand-title">GovFix <span class="badge-tag">DY PATIL CAMPUS</span></div>
-        <div class="brand-subtitle">University Service Requests & Institutional Accountability Engine · VORTEXA 3.0</div>
+        <div class="brand-title">
+          GovFix
+          <span class="brand-campus-tag">DY Patil Campus</span>
+        </div>
+        <div class="brand-subtitle">University Service Request & Institutional Workflow Engine</div>
       </div>
     </div>
 
     <!-- Live Simulation Time Controller -->
-    <div class="sim-clock-bar">
-      <div class="clock-icon">⏱️</div>
-      <div class="clock-details">
-        <span class="clock-label">CAMPUS SLA CLOCK:</span>
-        <span id="liveClockDisplay" class="clock-value">Syncing...</span>
-        <span id="virtualOffsetTag" class="badge-offset">+0.0h</span>
+    <div class="sim-clock-capsule">
+      <div class="sim-clock-info">
+        <span class="sim-clock-label">SLA Clock:</span>
+        <span id="liveClockDisplay" class="sim-clock-time">Syncing...</span>
+        <span id="virtualOffsetTag" class="sim-offset-badge">+0.0h</span>
       </div>
-      <div class="time-quick-actions">
-        <button id="btnTimeTravel12" class="btn-time-fast" title="Simulate +12 Hours">+12h</button>
-        <button id="btnTimeTravel24" class="btn-time-fast" title="Simulate +24 Hours">+24h</button>
-        <button id="btnTimeTravel48" class="btn-time-fast" title="Simulate +48 Hours">+48h</button>
-        <button id="btnTimeReset" class="btn-time-reset" title="Reset to Real-Time">Reset</button>
+      <div class="sim-clock-actions">
+        <button id="btnTimeTravel12" class="sim-btn-step" title="Simulate +12 Hours">+12h</button>
+        <button id="btnTimeTravel24" class="sim-btn-step" title="Simulate +24 Hours">+24h</button>
+        <button id="btnTimeTravel48" class="sim-btn-step" title="Simulate +48 Hours">+48h</button>
+        <button id="btnTimeReset" class="sim-btn-reset" title="Reset to Real-Time">Reset</button>
       </div>
     </div>
   </header>
 
   <!-- Navigation Tabs -->
-  <nav class="nav-tabs">
+  <nav class="tabs-container">
     <button class="tab-btn active" data-tab="tab-citizen">
-      <span class="tab-icon">🎓</span> 1. Student & Faculty Portal
+      Student & Faculty
     </button>
     <button class="tab-btn" data-tab="tab-officer">
-      <span class="tab-icon">📋</span> 2. Department Supervisor Desk
-      <span id="officerCountBadge" class="tab-pill">0</span>
+      Supervisor Desk
+      <span id="officerCountBadge" class="tab-counter">0</span>
     </button>
     <button class="tab-btn" data-tab="tab-commissioner">
-      <span class="tab-icon">🏢</span> 3. Campus Administration & Registrar War Room
-      <span id="escalationCountBadge" class="tab-pill badge-danger">0</span>
+      Administration
+      <span id="escalationCountBadge" class="tab-counter danger">0</span>
     </button>
-    <button class="tab-btn tab-highlight" data-tab="tab-judge">
-      <span class="tab-icon">⚡</span> 4. Judge Live Simulator & Chaos Panel
+    <button class="tab-btn" data-tab="tab-judge">
+      Audit & Benchmarks
     </button>
   </nav>
 
-  <!-- Notification Banner / Alert Bar -->
+  <!-- Notification Toast -->
   <div id="toastNotification" class="toast-container hidden"></div>
 
   <main class="main-content">
@@ -91,99 +69,100 @@
     <section id="tab-citizen" class="tab-pane active">
       <div class="section-header">
         <div>
-          <h2>Campus Service Request Portal (DY Patil)</h2>
-          <p>Submit campus infrastructure, laboratory IT, and facilities requests. Advisory AI extracts room, asset, and priority.</p>
+          <h2>Campus Service Requests</h2>
+          <p>Submit and track academic IT, electrical safety, classroom AV, and hostel facility service requests.</p>
+        </div>
+        <div class="role-pill">
+          <span class="dot"></span> Role: <strong>Student / Faculty</strong>
         </div>
       </div>
 
       <div class="portal-grid">
         <!-- Request Form Card -->
-        <div class="card form-card">
+        <div class="card">
           <div class="card-header">
-            <h3>📝 Register Service Request (तक्रार / विनंती)</h3>
-            <span class="badge-pill">Campus Access</span>
+            <h3>New Service Request</h3>
+            <span class="badge-subtle">Online Intake</span>
           </div>
 
           <!-- Quick Fill Sample Presets -->
-          <div class="preset-pills">
-            <span class="preset-label">Quick Samples:</span>
-            <button type="button" class="preset-btn" onclick="window.govFix.fillSample('gpu')">🖥️ Lab 304 GPU Failure</button>
-            <button type="button" class="preset-btn" onclick="window.govFix.fillSample('hazard')">⚡ Electrical Lab Hazard (12h)</button>
-            <button type="button" class="preset-btn" onclick="window.govFix.fillSample('av')">📽️ Seminar Hall Projector</button>
-            <button type="button" class="preset-btn" onclick="window.govFix.fillSample('plumbing')">🚰 Hostel Water Pump</button>
+          <div class="presets-row">
+            <span class="presets-label">Presets:</span>
+            <button type="button" class="preset-chip" onclick="window.govFix.fillSample('gpu')">Lab 304 GPU Rig</button>
+            <button type="button" class="preset-chip" onclick="window.govFix.fillSample('hazard')">Electrical Breaker</button>
+            <button type="button" class="preset-chip" onclick="window.govFix.fillSample('av')">Seminar Projector</button>
+            <button type="button" class="preset-chip" onclick="window.govFix.fillSample('plumbing')">Hostel Pump</button>
           </div>
 
           <form id="citizenComplaintForm">
             <div class="form-group">
-              <label>Your Name (नाव / नाव):</label>
-              <input type="text" id="citizenName" placeholder="e.g. Prof. Aniket Kulkarni / Student" required value="Prof. Aniket Kulkarni">
+              <label>Full Name</label>
+              <input type="text" id="citizenName" placeholder="e.g. Prof. Aniket Kulkarni" required value="Prof. Aniket Kulkarni">
             </div>
 
             <div class="form-group">
-              <label>Campus Email / Roll No (संपर्क):</label>
+              <label>Campus Email / Roll No</label>
               <input type="text" id="citizenContact" placeholder="e.g. aniket.kulkarni@dypit.edu.in" required value="aniket.kulkarni@dypit.edu.in">
             </div>
 
             <div class="form-group">
-              <label>Room / Lab / Facility (ठिकाण / विभाग):</label>
+              <label>Location (Room / Lab / Facility)</label>
               <input type="text" id="citizenLocation" placeholder="e.g. Lab 304 - Computer Engineering" value="Lab 304 - Computer Engineering">
             </div>
 
             <div class="form-group">
-              <label>Describe the Service Request (तपशील):</label>
-              <textarea id="citizenDescription" rows="4" placeholder="Describe the issue... (e.g. Workstation RIG-07 in Computer Lab 304 shut down abruptly with burnt smell from SMPS unit during project lab.)" required>Workstation RIG-07 in Computer Lab 304 shut down abruptly with burnt smell from SMPS unit during project lab.</textarea>
+              <label>Issue Description</label>
+              <textarea id="citizenDescription" rows="3" placeholder="Describe the problem, symptoms, and asset tag..." required>Workstation RIG-07 in Computer Lab 304 shut down abruptly with burnt smell from SMPS unit during project lab.</textarea>
             </div>
 
             <button type="submit" id="btnSubmitComplaint" class="btn btn-primary btn-block">
-              🚀 Submit Request & Trigger AI Copilot
+              Submit Request
             </button>
           </form>
 
           <!-- Real-Time AI Extraction Feedback Box -->
           <div id="aiExtractionResultBox" class="ai-box hidden">
             <div class="ai-box-header">
-              <span class="ai-tag">FreeLLMAPI Advisory Copilot</span>
-              <span class="ai-status">100% Non-Binding</span>
+              <span class="ai-tag">AI Copilot Analysis</span>
+              <span class="ai-status">Advisory</span>
             </div>
-            <div class="ai-box-body">
-              <div class="ai-meta-row">
-                <span>Extracted Category: <strong id="aiExtractedCategory">-</strong></span>
-                <span>SLA Urgency: <strong id="aiExtractedUrgency" class="badge-urgency">-</strong></span>
-              </div>
-              <div class="ai-meta-row">
-                <span>Identified Room: <strong id="aiExtractedWard">-</strong></span>
-                <span>Assigned Tech: <strong id="aiExtractedTech">-</strong></span>
-              </div>
-              <div id="aiDuplicateAlert" class="ai-alert hidden"></div>
-              <div class="ai-draft-note">
-                <span class="draft-title">Advisory Work Order Draft:</span>
-                <p id="aiDraftResponse" class="draft-text">-</p>
-              </div>
+            <div class="ai-meta-row">
+              <span>Category: <strong id="aiExtractedCategory">-</strong></span>
+              <span>Priority: <strong id="aiExtractedUrgency" class="badge-urgency">-</strong></span>
+            </div>
+            <div class="ai-meta-row">
+              <span>Target Room: <strong id="aiExtractedWard">-</strong></span>
+              <span>Suggested Technician: <strong id="aiExtractedTech">-</strong></span>
+            </div>
+            <div id="aiDuplicateAlert" class="ai-alert hidden" style="margin-top:0.4rem; font-size:0.75rem; color:#f59e0b;"></div>
+            <div class="ai-draft-note">
+              <span class="draft-title">Work Order Summary:</span>
+              <p id="aiDraftResponse" class="draft-text">-</p>
             </div>
           </div>
         </div>
 
         <!-- Requester Live Status Tracking Card -->
-        <div class="card status-card">
+        <div class="card">
           <div class="card-header">
-            <h3>🔎 Live Campus Request Tracker</h3>
-            <span class="badge-pill">Real-Time SLA</span>
+            <h3>Active Requests & Status</h3>
+            <span class="badge-subtle">Real-Time SLA</span>
           </div>
 
           <!-- Category Quick Filter Pills -->
-          <div class="category-filter-pills" style="display:flex; gap:0.4rem; margin-bottom: 0.8rem; overflow-x: auto; padding-bottom: 4px;">
-            <button type="button" id="catFilter_ALL" class="cat-pill active" onclick="window.govFix.filterCategory('ALL')">All Requests</button>
-            <button type="button" id="catFilter_IT" class="cat-pill" onclick="window.govFix.filterCategory('Academic IT')">🖥️ Academic IT</button>
-            <button type="button" id="catFilter_Safety" class="cat-pill" onclick="window.govFix.filterCategory('Electrical')">⚡ Electrical Safety</button>
-            <button type="button" id="catFilter_AV" class="cat-pill" onclick="window.govFix.filterCategory('AV')">📽️ Classroom AV</button>
-            <button type="button" id="catFilter_Facilities" class="cat-pill" onclick="window.govFix.filterCategory('Infrastructure')">🚰 Facilities</button>
+          <div class="category-filter-pills">
+            <button type="button" id="catFilter_ALL" class="cat-pill active" onclick="window.govFix.filterCategory('ALL')">All</button>
+            <button type="button" id="catFilter_IT" class="cat-pill" onclick="window.govFix.filterCategory('Academic IT')">Academic IT</button>
+            <button type="button" id="catFilter_Safety" class="cat-pill" onclick="window.govFix.filterCategory('Electrical')">Electrical</button>
+            <button type="button" id="catFilter_AV" class="cat-pill" onclick="window.govFix.filterCategory('AV')">Classroom AV</button>
+            <button type="button" id="catFilter_Facilities" class="cat-pill" onclick="window.govFix.filterCategory('Infrastructure')">Facilities</button>
           </div>
 
           <div class="filter-bar">
-            <input type="text" id="ticketSearchInput" placeholder="🔍 Search by Ticket ID (#DYP-...), room, asset, or keywords...">
+            <input type="text" id="ticketSearchInput" placeholder="Filter by Ticket ID, room, or keyword...">
           </div>
 
-          <div id="citizenTicketList" class="ticket-list ticket-cards-scroll">
+          <div id="citizenTicketList" class="ticket-cards-scroll">
             <!-- Populated via JS -->
           </div>
         </div>
@@ -196,20 +175,20 @@
     <section id="tab-officer" class="tab-pane">
       <div class="section-header">
         <div>
-          <h2>Department Supervisor Triage & Dispatch Desk</h2>
-          <p>Review incoming student/faculty requests, inspect AI recommendations, dispatch technicians, and approve closure evidence.</p>
+          <h2>Supervisor Triage & Dispatch Desk</h2>
+          <p>Triage requests, assign certified technicians, inspect physical repair evidence, and verify resolutions.</p>
         </div>
-        <div class="role-badge">
-          <span class="role-dot"></span> Authorized Role: <strong>SUPERVISOR</strong>
+        <div class="role-pill">
+          <span class="dot"></span> Role: <strong>Supervisor (HOD / Estate)</strong>
         </div>
       </div>
 
       <div class="officer-layout">
         <!-- Request Queue List -->
-        <div class="card officer-list-card">
+        <div class="card">
           <div class="card-header">
-            <h3>Active Department Service Queue</h3>
-            <span id="officerFilterCount" class="badge-pill">5 Requests</span>
+            <h3>Department Queue</h3>
+            <span id="officerFilterCount" class="badge-subtle">0 Requests</span>
           </div>
           <div id="officerTicketList" class="ticket-cards-scroll">
             <!-- Populated via JS -->
@@ -217,29 +196,31 @@
         </div>
 
         <!-- Selected Request Management Panel -->
-        <div class="card officer-detail-card">
+        <div class="card">
           <div class="card-header">
-            <h3>Administrative Action & FSM Guard</h3>
+            <h3>Request Management & Workflow Actions</h3>
             <span id="selectedTicketStatusBadge" class="badge-state">SELECT REQUEST</span>
           </div>
           <div id="officerActionPane" class="officer-pane-content">
-            <p class="placeholder-text">Select any request from the left to inspect AI recommendations, assign technicians, or sign off inspections.</p>
+            <p style="color: var(--text-dim); font-size: 0.85rem; padding: 2rem 0; text-align: center;">
+              Select a ticket from the queue on the left to inspect details, assign technicians, or sign off closure evidence.
+            </p>
           </div>
         </div>
       </div>
     </section>
 
     <!-- ========================================================================= -->
-    <!-- TAB 3: CAMPUS ADMINISTRATION & REGISTRAR WAR ROOM -->
+    <!-- TAB 3: CAMPUS ADMINISTRATION WAR ROOM -->
     <!-- ========================================================================= -->
     <section id="tab-commissioner" class="tab-pane">
       <div class="section-header">
         <div>
-          <h2>Campus Administration & Registrar War Room</h2>
-          <p>High-level SLA governance across Dr. D. Y. Patil Institute of Technology with automated escalation oversight.</p>
+          <h2>Institutional Administration & Governance</h2>
+          <p>Campus-wide SLA monitoring and automatic escalation oversight for campus leadership.</p>
         </div>
-        <div class="role-badge badge-comm">
-          <span class="role-dot red"></span> Authorized Role: <strong>ADMINISTRATOR</strong>
+        <div class="role-pill admin">
+          <span class="dot"></span> Role: <strong>Campus Registrar</strong>
         </div>
       </div>
 
@@ -247,39 +228,39 @@
       <div class="metrics-grid">
         <div class="metric-card">
           <div class="metric-val" id="metricTotal">0</div>
-          <div class="metric-label">Total Registered Requests</div>
+          <div class="metric-label">Total Requests</div>
         </div>
         <div class="metric-card metric-warning">
           <div class="metric-val" id="metricL1">0</div>
-          <div class="metric-label">Tier-1 Escalations (Supervisor Level)</div>
+          <div class="metric-label">Tier-1 Escalations</div>
         </div>
         <div class="metric-card metric-danger">
           <div class="metric-val" id="metricL2">0</div>
-          <div class="metric-label">Tier-2 Escalations (Registrar Intervention)</div>
+          <div class="metric-label">Tier-2 Escalations</div>
         </div>
         <div class="metric-card metric-success">
           <div class="metric-val" id="metricResolved">0</div>
-          <div class="metric-label">Successfully Closed / Verified</div>
+          <div class="metric-label">Resolved & Closed</div>
         </div>
       </div>
 
       <!-- Escalated Critical Grid -->
-      <div class="card escalation-table-card">
+      <div class="card">
         <div class="card-header">
-          <h3>🚨 Active Campus SLA Escalation Roster</h3>
-          <span class="badge-pill badge-danger">Immediate Institutional Intervention</span>
+          <h3>Active SLA Escalations</h3>
+          <span class="badge-subtle" style="color: #fca5a5;">Requires Attention</span>
         </div>
         <div class="table-responsive">
           <table class="data-table">
             <thead>
               <tr>
                 <th>Ticket ID</th>
-                <th>Room / Facility</th>
+                <th>Location</th>
                 <th>Category</th>
                 <th>Priority</th>
                 <th>Current Status</th>
                 <th>SLA Time Remaining</th>
-                <th>Administrative Action</th>
+                <th>Action</th>
               </tr>
             </thead>
             <tbody id="commissionerEscalationTable">
@@ -291,122 +272,123 @@
     </section>
 
     <!-- ========================================================================= -->
-    <!-- TAB 4: JUDGE SIMULATOR & CHAOS TESTING PANEL -->
+    <!-- TAB 4: AUDIT LEDGER & BENCHMARKS -->
     <!-- ========================================================================= -->
     <section id="tab-judge" class="tab-pane">
       <div class="section-header">
         <div>
-          <h2>⚡ Judge Live Testing & Chaos Simulator</h2>
-          <p>Test edge cases, trigger illegal transitions (HTTP 409/403), fast-forward time to test SLA auto-escalation, and verify cryptographic SHA-256 integrity.</p>
+          <h2>Audit Ledger & Automated Benchmarks</h2>
+          <p>Verify cryptographic SHA-256 block chain integrity and execute the 10-point academic benchmark suite.</p>
         </div>
-        <div class="judge-badge">
-          <span>🏆 VORTEXA 3.0 EVALUATION HARNESS</span>
+        <div class="role-pill">
+          <span class="dot"></span> <strong>Verification Harness</strong>
         </div>
       </div>
 
-      <!-- Live In-Browser 10-Point Benchmark Runner Card -->
-      <div class="card judge-card full-width" style="margin-bottom: 1.5rem; background: linear-gradient(135deg, rgba(37, 99, 235, 0.1), rgba(139, 92, 246, 0.1)); border: 1px solid rgba(96, 165, 250, 0.35);">
-        <div class="card-header" style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+      <!-- Live 10-Point Benchmark Runner Card -->
+      <div class="card" style="margin-bottom: 1.5rem;">
+        <div class="card-header">
           <div>
-            <h3>🧪 Automated 10-Point Benchmark Evaluation Runner</h3>
-            <p style="font-size: 0.82rem; color: #94a3b8; margin: 2px 0 0 0;">Directly runs all 10 Section 11.1 academic verification test cases against the live backend.</p>
+            <h3>Automated 10-Point Benchmark Suite</h3>
+            <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 2px;">Runs all Section 11.1 academic verification test cases against the live backend engine.</p>
           </div>
-          <button id="btnRunLiveBenchmark" class="btn btn-sm btn-primary" style="box-shadow: 0 0 16px rgba(37, 99, 235, 0.4);">
-            ▶️ Run Full 10-Point Test Suite Live
+          <button id="btnRunLiveBenchmark" class="btn btn-primary btn-sm">
+            Run 10-Point Benchmark Suite
           </button>
         </div>
-        <div id="liveBenchmarkResults" class="hidden" style="margin-top: 1rem; background: rgba(13,20,36,0.95); border: 1px solid var(--border-color); border-radius: 9px; padding: 1rem; font-family: var(--font-mono); font-size: 0.82rem; max-height: 240px; overflow-y: auto;">
+        <div id="liveBenchmarkResults" class="hidden" style="margin-top: 0.75rem; background: rgba(9, 13, 22, 0.9); border: 1px solid var(--border-subtle); border-radius: 6px; padding: 0.9rem; font-family: var(--font-mono); font-size: 0.8rem; max-height: 220px; overflow-y: auto;">
         </div>
       </div>
 
       <div class="judge-grid">
-        <!-- Chaos Test 1: Illegal State Transition Refusal -->
-        <div class="card judge-card">
+        <!-- Interactive FSM Transition Tester -->
+        <div class="card">
           <div class="card-header">
-            <h3>🛡️ Test 1: Deterministic FSM Refusal Test</h3>
-            <span class="badge-tag">Rule Enforcement</span>
+            <h3>FSM Transition Guard Tester</h3>
+            <span class="badge-subtle">Authorization Gate</span>
           </div>
-          <p class="card-desc">Attempt prohibited transitions (e.g. Requester trying to mark Closed, or skipping triage) to verify explicit system rejection (HTTP 409 / 403) and audit logging.</p>
+          <p class="card-desc">Simulate illegal state transitions (e.g. Requester trying to triage or close) to verify HTTP 409/403 refusals.</p>
 
           <div class="form-group">
-            <label>Target Request:</label>
+            <label>Target Request</label>
             <select id="judgeTicketSelector" class="form-select"></select>
           </div>
 
           <div class="form-group">
-            <label>Simulate Role:</label>
+            <label>Actor Role</label>
             <select id="judgeRoleSelector" class="form-select">
               <option value="REQUESTER">REQUESTER (Unauthorized for Triage/Closure)</option>
-              <option value="SUPERVISOR">SUPERVISOR</option>
-              <option value="OFFICER">OFFICER (Technician)</option>
-              <option value="ADMINISTRATOR">ADMINISTRATOR (Registrar)</option>
+              <option value="SUPERVISOR">SUPERVISOR (HOD / Estate Officer)</option>
+              <option value="OFFICER">OFFICER (Field Technician)</option>
+              <option value="ADMINISTRATOR">ADMINISTRATOR (Campus Registrar)</option>
             </select>
           </div>
 
           <div class="form-group">
-            <label>Attempt Target State:</label>
+            <label>Target State</label>
             <select id="judgeTargetStateSelector" class="form-select">
-              <option value="CLOSED">CLOSED (Will refuse 409 if not inspected/triaged)</option>
-              <option value="READY_FOR_CLOSURE">READY_FOR_CLOSURE (Will refuse 422 if no evidence)</option>
+              <option value="CLOSED">CLOSED (Refused 409 if not verified/inspected)</option>
+              <option value="READY_FOR_CLOSURE">READY_FOR_CLOSURE (Refused 422 if no evidence)</option>
               <option value="ASSIGNED">ASSIGNED</option>
-              <option value="TRIAGED">TRIAGED (Will refuse 403 if Requester)</option>
+              <option value="TRIAGED">TRIAGED (Refused 403 if Requester)</option>
             </select>
           </div>
 
-          <button id="btnExecuteJudgeTransition" class="btn btn-warning btn-block">
-            ⚡ Execute Transition Attempt
+          <button id="btnExecuteJudgeTransition" class="btn btn-outline btn-block">
+            Execute Transition Attempt
           </button>
 
-          <div id="judgeTransitionResult" class="judge-result-box hidden"></div>
+          <div id="judgeTransitionResult" class="judge-result-box hidden" style="margin-top: 0.8rem; padding: 0.6rem; border-radius: 6px; font-family: var(--font-mono); font-size: 0.78rem;"></div>
         </div>
 
-        <!-- Chaos Test 2: Virtual Time-Travel SLA Escalation -->
-        <div class="card judge-card">
+        <!-- Virtual Time-Travel SLA Escalation -->
+        <div class="card">
           <div class="card-header">
-            <h3>⏱️ Test 2: Time-Travel SLA Auto-Escalation</h3>
-            <span class="badge-tag">SLA Engine</span>
+            <h3>Time-Travel SLA Auto-Escalation</h3>
+            <span class="badge-subtle">SLA Engine</span>
           </div>
-          <p class="card-desc">Simulate hours passing to verify that SLA deadlines trigger automated Tier-1 and Tier-2 escalations without human intervention.</p>
+          <p class="card-desc">Fast-forward time to test automatic Tier-1 and Tier-2 escalation without human intervention.</p>
 
-          <div class="time-controls-grid">
-            <button class="btn btn-outline" onclick="window.govFix.advanceTime(12)">Fast Forward +12h</button>
-            <button class="btn btn-outline" onclick="window.govFix.advanceTime(24)">Fast Forward +24h</button>
-            <button class="btn btn-outline" onclick="window.govFix.advanceTime(48)">Fast Forward +48h</button>
-            <button class="btn btn-danger" onclick="window.govFix.resetTime()">Reset to Real Time</button>
+          <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 1rem;">
+            <button class="btn btn-outline btn-sm" onclick="window.govFix.advanceTime(12)">Advance +12h</button>
+            <button class="btn btn-outline btn-sm" onclick="window.govFix.advanceTime(24)">Advance +24h</button>
+            <button class="btn btn-outline btn-sm" onclick="window.govFix.advanceTime(48)">Advance +48h</button>
+            <button class="btn btn-danger btn-sm" onclick="window.govFix.resetTime()">Reset Time</button>
           </div>
 
-          <div class="escalation-feed">
-            <div class="feed-header">Auto-Escalation Daemon Output:</div>
-            <div id="judgeEscalationFeed" class="feed-box">
-              <span class="text-muted">Daemon active. Advance time above to test automated escalation triggers.</span>
+          <div style="border-top: 1px solid var(--border-subtle); padding-top: 0.8rem;">
+            <div style="font-size: 0.72rem; font-weight: 600; color: var(--text-dim); text-transform: uppercase; margin-bottom: 0.4rem;">Daemon Activity:</div>
+            <div id="judgeEscalationFeed" style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted); background: rgba(9, 13, 22, 0.6); padding: 0.6rem; border-radius: 6px; min-height: 70px;">
+              Advance time above to trigger automatic SLA tier evaluations.
             </div>
           </div>
         </div>
 
-        <!-- Chaos Test 3: Tamper-Evident SHA-256 Audit Ledger -->
-        <div class="card judge-card full-width">
+        <!-- Cryptographic Audit Ledger -->
+        <div class="card full-width">
           <div class="card-header">
-            <h3>🔐 Test 3: Cryptographic SHA-256 Audit Trail Verifier</h3>
-            <button id="btnVerifyChain" class="btn btn-sm btn-success">Verify Cryptographic Integrity</button>
+            <div>
+              <h3>Cryptographic SHA-256 Audit Trail</h3>
+              <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 2px;">Immutable chained audit ledger of all accepted transitions and refused attempts.</p>
+            </div>
+            <button id="btnVerifyChain" class="btn btn-success btn-sm">Verify Hash Integrity</button>
           </div>
-          <p class="card-desc">Every accepted transition, refused attempt, and escalation is cryptographically chained with SHA-256 hashes.</p>
 
           <div id="auditVerificationBanner" class="audit-banner">
-            <span class="status-indicator-dot"></span>
-            <span id="auditBannerText">Chain Ready for Verification. Total Blocks: Loading...</span>
+            <span id="auditBannerText">Chain Ready for Verification.</span>
           </div>
 
-          <div class="audit-table-wrap">
-            <table class="data-table audit-table">
+          <div class="table-responsive">
+            <table class="data-table">
               <thead>
                 <tr>
                   <th>Block #</th>
                   <th>Timestamp</th>
-                  <th>Event Type</th>
+                  <th>Event</th>
                   <th>Actor / Role</th>
                   <th>Ticket</th>
-                  <th>Details & Refusal Codes</th>
-                  <th>Block Hash (SHA-256)</th>
+                  <th>Details</th>
+                  <th>SHA-256 Hash</th>
                 </tr>
               </thead>
               <tbody id="auditLedgerTableBody">
@@ -425,72 +407,71 @@
       <div class="modal-card">
         <div class="modal-header">
           <div>
-            <h3 style="display:flex; align-items:center; gap:0.5rem;">📎 Technician Evidence Submission & Closure Proposal</h3>
-            <p style="font-size: 0.8rem; color: #94a3b8; margin: 3px 0 0 0;">Upload physical repair proof, diagnostic measurements, and work notes before closure.</p>
+            <h3>Technician Evidence & Closure Proposal</h3>
+            <p style="font-size: 0.78rem; color: var(--text-muted); margin-top: 2px;">Attach diagnostic readings and proof of repair before proposing closure.</p>
           </div>
           <button type="button" class="modal-close-btn" onclick="window.govFix.closeEvidenceModal()">✕</button>
         </div>
 
         <div class="modal-body">
-          <div style="background: rgba(37,99,235,0.08); border: 1px solid rgba(96,165,250,0.25); border-radius: 8px; padding: 0.75rem; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;">
+          <div style="background: rgba(59,130,246,0.06); border: 1px solid rgba(59,130,246,0.2); border-radius: 6px; padding: 0.6rem 0.8rem; margin-bottom: 0.9rem; display: flex; justify-content: space-between; font-size: 0.8rem;">
             <div>
-              <span style="font-size: 0.75rem; color: #94a3b8;">Target Request:</span>
+              <span style="color: var(--text-dim);">Target:</span>
               <strong id="modalTicketId" style="color: #60a5fa; font-family: var(--font-mono); margin-left: 0.3rem;">#DYP-2026-101</strong>
             </div>
             <div>
-              <span style="font-size: 0.75rem; color: #94a3b8;">Location:</span>
+              <span style="color: var(--text-dim);">Facility:</span>
               <strong id="modalTicketRoom" style="color: #fff; margin-left: 0.3rem;">Lab 304</strong>
             </div>
           </div>
 
           <div class="form-group">
-            <label>Field Technician Notes (तपशीलवार दुरुस्ती अहवाल):</label>
-            <textarea id="modalWorkNotes" rows="3" placeholder="Describe the physical work done, components replaced, and tests performed..." required>Replaced burnt 750W SMPS unit with new Corsair Bronze unit. Cleaned GPU heat sink and conducted 2-hour stress benchmark.</textarea>
+            <label>Field Technician Work Report</label>
+            <textarea id="modalWorkNotes" rows="2" placeholder="Describe physical repairs performed..." required>Replaced burnt 750W SMPS unit with Corsair Bronze unit. Passed 2-hour benchmark stress test.</textarea>
           </div>
 
           <div class="form-group">
-            <label>Diagnostic Measurements & Readings:</label>
-            <input type="text" id="modalMeasurements" placeholder="e.g. Voltage: 230V Nominal, Current: 0.8A, Ping: 2ms, Pressure: 3.5 Bar" value="12V Rail: 12.08V Stable, 5V Rail: 5.02V, Temperature: 48°C Under Load">
+            <label>Diagnostic Measurements & Readings</label>
+            <input type="text" id="modalMeasurements" placeholder="e.g. 12V Rail: 12.08V, Temperature: 48C" value="12V Rail: 12.08V Stable, 5V Rail: 5.02V, Temperature: 48°C Under Load">
           </div>
 
           <!-- Quick Sample Evidence Presets -->
           <div style="margin-bottom: 0.8rem;">
-            <span style="font-size: 0.75rem; font-weight: 700; color: #94a3b8; text-transform: uppercase;">Quick Evidence Presets:</span>
-            <div style="display:flex; flex-wrap:wrap; gap: 0.4rem; margin-top: 0.3rem;">
-              <button type="button" class="preset-btn" onclick="window.govFix.selectSampleEvidence('smps')">📸 SMPS Unit Replaced Photo</button>
-              <button type="button" class="preset-btn" onclick="window.govFix.selectSampleEvidence('voltage')">⚡ High-Voltage Breaker Certificate</button>
-              <button type="button" class="preset-btn" onclick="window.govFix.selectSampleEvidence('hdmi')">📽️ Projector HDMI Color Calibration</button>
-              <button type="button" class="preset-btn" onclick="window.govFix.selectSampleEvidence('pump')">🚰 Water Pump 3.5 Bar Pressure Gauge</button>
+            <div style="font-size: 0.72rem; font-weight: 600; color: var(--text-dim); text-transform: uppercase; margin-bottom: 0.35rem;">Sample Presets:</div>
+            <div style="display:flex; flex-wrap:wrap; gap: 0.35rem;">
+              <button type="button" class="preset-chip" onclick="window.govFix.selectSampleEvidence('smps')">SMPS Replaced</button>
+              <button type="button" class="preset-chip" onclick="window.govFix.selectSampleEvidence('voltage')">Breaker Certificate</button>
+              <button type="button" class="preset-chip" onclick="window.govFix.selectSampleEvidence('hdmi')">Projector Calibration</button>
+              <button type="button" class="preset-chip" onclick="window.govFix.selectSampleEvidence('pump')">Pump Pressure Gauge</button>
             </div>
           </div>
 
           <!-- Drag & Drop / File Input Box -->
           <div class="upload-dropzone" onclick="document.getElementById('modalFileInput').click()">
             <input type="file" id="modalFileInput" style="display: none;" onchange="window.govFix.handleFileUpload(event)">
-            <div style="font-size: 1.8rem; margin-bottom: 0.4rem;">📷</div>
-            <div style="font-weight: 600; color: #fff; font-size: 0.88rem;">Drop repair photo here or click to browse</div>
-            <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 2px;">Supported: JPG, PNG, PDF (Max 10 MB) · Automatic SHA-256 Checksumming</div>
+            <div style="font-weight: 600; color: #fff; font-size: 0.84rem;">Drop repair file or click to browse</div>
+            <div style="font-size: 0.74rem; color: var(--text-muted); margin-top: 2px;">Supports JPG, PNG, PDF (Max 10MB) · Automatic SHA-256 Hash</div>
           </div>
 
           <!-- Active Evidence Preview Box -->
-          <div id="modalEvidencePreview" style="margin-top: 1rem; background: rgba(13,20,36,0.9); border: 1px solid rgba(255,255,255,0.1); border-radius: 9px; padding: 0.85rem; display: flex; align-items: center; gap: 0.85rem;">
-            <div id="previewIcon" style="font-size: 1.8rem; background: rgba(37,99,235,0.15); width: 44px; height: 44px; border-radius: 8px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(96,165,250,0.3);">📸</div>
-            <div style="flex: 1;">
+          <div id="modalEvidencePreview" style="margin-top: 0.8rem; background: rgba(9,13,22,0.85); border: 1px solid var(--border-subtle); border-radius: 6px; padding: 0.75rem; display: flex; align-items: center; gap: 0.75rem;">
+            <div id="previewIcon" style="font-size: 1.2rem; background: rgba(59,130,246,0.12); width: 36px; height: 36px; border-radius: 6px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(59,130,246,0.25);">DOC</div>
+            <div style="flex: 1; overflow:hidden;">
               <div style="display: flex; justify-content: space-between; align-items: center;">
-                <strong id="previewFileName" style="color: #fff; font-size: 0.85rem;">gpu_smps_replacement_proof.jpg</strong>
-                <span id="previewFileSize" style="font-size: 0.75rem; color: #94a3b8;">1.6 MB</span>
+                <strong id="previewFileName" style="color: #fff; font-size: 0.82rem;">gpu_smps_replacement_proof.jpg</strong>
+                <span id="previewFileSize" style="font-size: 0.72rem; color: var(--text-muted);">1.6 MB</span>
               </div>
-              <div style="font-size: 0.72rem; color: #60a5fa; font-family: var(--font-mono); margin-top: 3px;">
+              <div style="font-size: 0.7rem; color: #60a5fa; font-family: var(--font-mono); margin-top: 2px; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">
                 SHA-256: <span id="previewChecksum">c8f12a9e4b77d810a9c8e11a2f3b901a88b...</span>
               </div>
             </div>
           </div>
         </div>
 
-        <div class="modal-footer" style="display:flex; justify-content:flex-end; gap: 0.6rem; padding: 1rem 1.4rem; border-top: 1px solid var(--border-color);">
-          <button type="button" class="btn btn-outline" onclick="window.govFix.closeEvidenceModal()">Cancel</button>
-          <button type="button" class="btn btn-success" onclick="window.govFix.submitEvidenceProposal()">
-            🚀 Attach Proof & Propose Closure (READY_FOR_CLOSURE)
+        <div style="display:flex; justify-content:flex-end; gap: 0.5rem; padding: 0.9rem 1.5rem; border-top: 1px solid var(--border-subtle);">
+          <button type="button" class="btn btn-outline btn-sm" onclick="window.govFix.closeEvidenceModal()">Cancel</button>
+          <button type="button" class="btn btn-primary btn-sm" onclick="window.govFix.submitEvidenceProposal()">
+            Attach Proof & Propose Closure
           </button>
         </div>
       </div>

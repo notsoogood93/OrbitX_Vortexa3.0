@@ -108,7 +108,7 @@ function initFormListeners() {
 
       if (data.success && (data.ticket || data.request)) {
         const ticket = data.ticket || data.request;
-        showToast('✅ Campus request registered & AI triaged successfully!');
+        showToast('Campus request registered and AI triaged.');
 
         // Display AI Extraction Box
         displayAiExtractionBox(ticket);
@@ -120,14 +120,14 @@ function initFormListeners() {
         selectedTicketId = ticket.id;
         await fetchGrievances();
       } else {
-        showToast('❌ Submission failed: ' + (data.error || 'Validation error'), true);
+        showToast('Submission error: ' + (data.error || 'Validation error'), true);
       }
     } catch (err) {
-      showToast('❌ Network error during submission: ' + err.message, true);
+      showToast('Network error during submission: ' + err.message, true);
     } finally {
       if (btn) {
         btn.disabled = false;
-        btn.textContent = '🚀 Submit Request & Trigger AI Copilot';
+        btn.textContent = 'Submit Request';
       }
     }
   });
@@ -213,7 +213,7 @@ function renderCitizenView() {
       { state: 'TRIAGED', label: 'Triaged' },
       { state: 'ASSIGNED', label: 'Assigned' },
       { state: 'IN_PROGRESS', label: 'In Progress' },
-      { state: 'READY_FOR_CLOSURE', label: 'Ready for Closure' },
+      { state: 'READY_FOR_CLOSURE', label: 'Proof Attached' },
       { state: 'CLOSED', label: 'Closed' },
     ];
     const stateOrder = steps.map((s) => s.state);
@@ -223,93 +223,97 @@ function renderCitizenView() {
       const isDone = idx <= currentIndex && ticket.status !== 'REJECTED_INVALID';
       const isActive = idx === currentIndex;
       return `
-        <div style="display:flex; flex-direction:column; align-items:center; flex:1; position:relative;">
-          <div style="width: 22px; height: 22px; border-radius: 50%; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; background: ${isDone ? '#2563eb' : 'rgba(255,255,255,0.1)'}; color: #fff; border: 1px solid ${isActive ? '#60a5fa' : 'transparent'};">
+        <div class="pipeline-step">
+          <div class="step-node ${isDone ? 'done' : ''} ${isActive ? 'active' : ''}">
             ${isDone ? '✓' : idx + 1}
           </div>
-          <span style="font-size: 10px; color: ${isActive ? '#93c5fd' : '#9ca3af'}; margin-top: 4px; text-align:center;">${step.label}</span>
+          <span class="step-label ${isActive ? 'active' : ''}">${step.label}</span>
         </div>
       `;
     }).join('');
 
-    // Actions if Ready for Closure or Resolved
+    // Satisfaction Actions
     let satisfactionActionHtml = '';
     if (ticket.status === 'READY_FOR_CLOSURE' || ticket.status === 'RESOLVED' || ticket.status === 'INSPECTION_PENDING') {
       satisfactionActionHtml = `
-        <div style="margin-top: 0.8rem; padding: 0.8rem; background: rgba(16, 185, 129, 0.12); border-radius: 8px; border: 1px solid rgba(16, 185, 129, 0.3);">
-          <strong style="color: #6ee7b7; font-size: 0.85rem;">Requester Verification Required:</strong>
-          <p style="font-size: 0.8rem; color: #cbd5e1; margin: 4px 0 8px 0;">Technician has submitted repair proof: "<em>${ticket.workNotes || 'Repair complete'}</em>". Please confirm your satisfaction:</p>
-          <div style="display:flex; gap: 0.5rem;">
-            <button class="btn btn-sm btn-success" onclick="window.govFix.requesterConfirmClose('${ticket.id}')">✓ Confirm Resolution (Rate 5★)</button>
-            <button class="btn btn-sm btn-danger" onclick="window.govFix.requesterReopen('${ticket.id}')">✗ Reopen (Still Broken)</button>
+        <div style="margin-top: 0.75rem; padding: 0.75rem; background: rgba(16, 185, 129, 0.08); border-radius: 6px; border: 1px solid rgba(16, 185, 129, 0.25);">
+          <div style="font-weight:600; color: #6ee7b7; font-size: 0.8rem; margin-bottom: 2px;">Requester Verification Required</div>
+          <p style="font-size: 0.78rem; color: #cbd5e1; margin-bottom: 0.6rem;">Technician work note: "<em>${ticket.workNotes || 'Repair complete'}</em>". Please confirm satisfaction:</p>
+          <div style="display:flex; gap: 0.4rem;">
+            <button class="btn btn-sm btn-success" onclick="window.govFix.requesterConfirmClose('${ticket.id}')">Confirm Resolution</button>
+            <button class="btn btn-sm btn-danger" onclick="window.govFix.requesterReopen('${ticket.id}')">Reopen Request</button>
           </div>
         </div>
       `;
     } else if (ticket.status === 'REOPENED') {
       satisfactionActionHtml = `
-        <div style="margin-top: 0.6rem; padding: 0.6rem; background: rgba(239, 68, 68, 0.12); border-radius: 6px; font-size: 0.8rem; color: #fca5a5;">
-          ⚠️ Request Reopened by Student/Faculty. Pending Department Supervisor re-triage.
+        <div style="margin-top: 0.6rem; padding: 0.6rem; background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.25); border-radius: 6px; font-size: 0.78rem; color: #fca5a5;">
+          Request reopened by requester. Awaiting supervisor re-triage.
+        </div>
+      `;
+    }
+
+    // Physical Evidence Card
+    let evidenceCardHtml = '';
+    if (ticket.evidenceAttachment) {
+      const ev = ticket.evidenceAttachment;
+      evidenceCardHtml = `
+        <div style="margin: 0.75rem 0; padding: 0.7rem; background: rgba(16, 185, 129, 0.06); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 6px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 0.35rem;">
+            <span style="font-weight:600; color:#6ee7b7; font-size:0.78rem;">
+              Verified Physical Repair Proof
+            </span>
+            <span style="font-size:0.68rem; font-family:var(--font-mono); background:rgba(16,185,129,0.18); color:#a7f3d0; padding:1px 5px; border-radius:3px;">
+              SHA-256 CHECKED
+            </span>
+          </div>
+          <div style="display:flex; gap:0.6rem; align-items:center; background:rgba(9,13,22,0.6); padding:0.45rem 0.6rem; border-radius:4px; margin-bottom:0.35rem;">
+            <div style="font-size:0.72rem; font-family:var(--font-mono); color:#93c5fd; background:rgba(59,130,246,0.12); padding:2px 6px; border-radius:3px;">FILE</div>
+            <div style="flex:1; overflow:hidden;">
+              <div style="display:flex; justify-content:space-between; font-size:0.78rem;">
+                <strong style="color:#fff;">${ev.fileName || 'repair_proof.jpg'}</strong>
+                <span style="color:#94a3b8; font-size:0.72rem;">${ev.fileSize || '1.8 MB'}</span>
+              </div>
+              <div style="font-size:0.68rem; color:#60a5fa; font-family:var(--font-mono); text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">
+                Hash: ${ev.sha256Checksum ? ev.sha256Checksum.slice(0, 32) + '...' : 'c8f12a9e...'}
+              </div>
+            </div>
+          </div>
+          ${ev.measurements ? `<div style="font-size:0.74rem; color:#cbd5e1; margin-bottom:2px;"><strong>Diagnostic:</strong> ${ev.measurements}</div>` : ''}
+          ${ev.notes ? `<div style="font-size:0.72rem; color:#94a3b8;"><strong>Notes:</strong> ${ev.notes}</div>` : ''}
         </div>
       `;
     }
 
     return `
-      <div class="card" style="margin-bottom: 1rem; border: 1px solid ${isSelected ? 'var(--accent-blue)' : 'var(--border-color)'}; background: ${isSelected ? 'rgba(37, 99, 235, 0.08)' : 'var(--bg-card)'};">
-        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 0.5rem;">
+      <div class="ticket-item-card">
+        <div class="ticket-head">
           <div>
-            <span class="ticket-id" style="font-weight:700; color:#60a5fa;">#${ticket.id}</span>
-            <span style="font-size: 0.8rem; color: #9ca3af; margin-left: 0.5rem;">📍 ${ticket.roomId || ticket.ward}</span>
+            <span class="ticket-id">#${ticket.id}</span>
+            <span class="ticket-location">${ticket.roomId || ticket.ward}</span>
           </div>
-          <div style="display:flex; gap: 0.4rem; align-items:center;">
-            <span class="badge-offset" style="font-size:0.75rem;">${ticket.urgency}</span>
-            <span class="badge-state state-${ticket.status}" style="font-size:0.75rem;">${ticket.status}</span>
+          <div style="display:flex; gap: 0.35rem; align-items:center;">
+            <span class="badge-urgency">${ticket.urgency}</span>
+            <span class="badge-state state-${ticket.status}">${ticket.status}</span>
           </div>
         </div>
 
-        <h4 style="color:#fff; font-size: 0.95rem; margin-bottom: 0.3rem;">${ticket.title}</h4>
-        <p style="color:#9ca3af; font-size: 0.82rem; margin-bottom: 0.8rem;">${ticket.description}</p>
+        <div class="ticket-title">${ticket.title}</div>
+        <div class="ticket-desc">${ticket.description}</div>
 
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; background: rgba(15,23,42,0.6); padding: 0.6rem; border-radius: 6px; font-size: 0.78rem; margin-bottom: 0.8rem;">
-          <div><span style="color:#64748b;">Category:</span> <strong style="color:#e2e8f0;">${ticket.category}</strong></div>
-          <div><span style="color:#64748b;">Asset Tag:</span> <strong style="color:#e2e8f0;">${ticket.assetId || 'DYP-CAMPUS-GENERIC'}</strong></div>
-          <div><span style="color:#64748b;">Assigned Tech:</span> <strong style="color:#e2e8f0;">${ticket.assignedEngineerId || ticket.assignedOfficerId || 'Unassigned'}</strong></div>
-          <div><span style="color:#64748b;">SLA Clock:</span> <strong style="color: ${isOverdue ? '#ef4444' : '#10b981'};">${isOverdue ? '⚠️ Overdue' : `${remainingH}h remaining`}</strong></div>
+        <div class="ticket-meta-grid">
+          <div><span>Category:</span> <strong>${ticket.category}</strong></div>
+          <div><span>Asset Tag:</span> <strong>${ticket.assetId || 'DYP-CAMPUS-GENERIC'}</strong></div>
+          <div><span>Technician:</span> <strong>${ticket.assignedEngineerId || ticket.assignedOfficerId || 'Unassigned'}</strong></div>
+          <div><span>SLA Deadline:</span> <strong style="color: ${isOverdue ? '#ef4444' : '#10b981'};">${isOverdue ? 'Overdue' : `${remainingH}h remaining`}</strong></div>
         </div>
 
-        <!-- 6-Stage Visual Progress Pipeline -->
-        <div style="display:flex; justify-content:space-between; margin: 0.8rem 0; padding: 0.4rem 0; border-top: 1px solid rgba(255,255,255,0.06); border-bottom: 1px solid rgba(255,255,255,0.06);">
+        <!-- 6-Stage Progress Track -->
+        <div class="progress-pipeline">
           ${timelineHtml}
         </div>
 
-        ${(() => {
-          if (!ticket.evidenceAttachment) return '';
-          const ev = ticket.evidenceAttachment;
-          return `
-            <div style="margin: 0.8rem 0; padding: 0.75rem; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 8px;">
-              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 0.4rem;">
-                <span style="font-weight:700; color:#6ee7b7; font-size:0.8rem; display:flex; align-items:center; gap:0.35rem;">
-                  <span>${ev.iconEmoji || '📎'}</span> Verified Technician Repair Proof
-                </span>
-                <span style="font-size:0.68rem; background:rgba(16,185,129,0.2); color:#a7f3d0; padding:2px 6px; border-radius:4px; font-weight:700;">SHA-256 VERIFIED</span>
-              </div>
-              <div style="display:flex; gap:0.6rem; align-items:center; background:rgba(15,23,42,0.6); padding:0.5rem; border-radius:6px; margin-bottom:0.4rem;">
-                <div style="font-size:1.4rem; background:rgba(255,255,255,0.06); width:34px; height:34px; border-radius:6px; display:flex; align-items:center; justify-content:center;">${ev.iconEmoji || '📸'}</div>
-                <div style="flex:1; overflow:hidden;">
-                  <div style="display:flex; justify-content:space-between;">
-                    <strong style="color:#fff; font-size:0.78rem;">${ev.fileName || 'repair_proof.jpg'}</strong>
-                    <span style="color:#94a3b8; font-size:0.7rem;">${ev.fileSize || '1.8 MB'}</span>
-                  </div>
-                  <div style="font-size:0.68rem; color:#60a5fa; font-family:var(--font-mono); text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">
-                    Hash: ${ev.sha256Checksum ? ev.sha256Checksum.slice(0, 32) + '...' : 'c8f12a9e...'}
-                  </div>
-                </div>
-              </div>
-              ${ev.measurements ? `<div style="font-size:0.75rem; color:#cbd5e1; margin-bottom:2px;"><strong>Diagnostic:</strong> ${ev.measurements}</div>` : ''}
-              ${ev.notes ? `<div style="font-size:0.73rem; color:#94a3b8;"><strong>Work Summary:</strong> ${ev.notes}</div>` : ''}
-            </div>
-          `;
-        })()}
-
+        ${evidenceCardHtml}
         ${satisfactionActionHtml}
       </div>
     `;
@@ -377,27 +381,29 @@ function renderOfficerActionPane(ticket) {
   if (ticket.evidenceAttachment) {
     const ev = ticket.evidenceAttachment;
     evidenceHtml = `
-      <div style="margin: 0.9rem 0; padding: 0.9rem; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 9px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 0.5rem;">
-          <span style="font-weight:700; color:#6ee7b7; font-size:0.85rem; display:flex; align-items:center; gap:0.4rem;">
-            <span>${ev.iconEmoji || '📎'}</span> Verified Physical Repair Proof & Inspection Attachment
+      <div style="margin: 0.85rem 0; padding: 0.8rem; background: rgba(16, 185, 129, 0.06); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 6px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 0.4rem;">
+          <span style="font-weight:600; color:#6ee7b7; font-size:0.8rem;">
+            Verified Physical Repair Proof
           </span>
-          <span style="font-size:0.7rem; background:rgba(16,185,129,0.2); color:#a7f3d0; padding:2px 6px; border-radius:4px; font-weight:700;">VERIFIED PROOF</span>
+          <span style="font-size:0.68rem; font-family:var(--font-mono); background:rgba(16,185,129,0.18); color:#a7f3d0; padding:1px 5px; border-radius:3px; font-weight:700;">
+            SHA-256 CHECKED
+          </span>
         </div>
-        <div style="display:flex; gap:0.8rem; align-items:center; background:rgba(15,23,42,0.6); padding:0.6rem; border-radius:7px; margin-bottom:0.5rem;">
-          <div style="font-size:1.8rem; background:rgba(255,255,255,0.06); width:42px; height:42px; border-radius:6px; display:flex; align-items:center; justify-content:center;">${ev.iconEmoji || '📸'}</div>
-          <div style="flex:1;">
-            <div style="display:flex; justify-content:space-between;">
-              <strong style="color:#fff; font-size:0.82rem;">${ev.fileName || 'repair_proof.jpg'}</strong>
-              <span style="color:#94a3b8; font-size:0.75rem;">${ev.fileSize || '1.8 MB'}</span>
+        <div style="display:flex; gap:0.6rem; align-items:center; background:rgba(9,13,22,0.6); padding:0.5rem 0.7rem; border-radius:4px; margin-bottom:0.4rem;">
+          <div style="font-size:0.72rem; font-family:var(--font-mono); color:#93c5fd; background:rgba(59,130,246,0.12); padding:2px 6px; border-radius:3px;">PROOF</div>
+          <div style="flex:1; overflow:hidden;">
+            <div style="display:flex; justify-content:space-between; font-size:0.8rem;">
+              <strong style="color:#fff;">${ev.fileName || 'repair_proof.jpg'}</strong>
+              <span style="color:#94a3b8; font-size:0.72rem;">${ev.fileSize || '1.8 MB'}</span>
             </div>
-            <div style="font-size:0.72rem; color:#60a5fa; font-family:var(--font-mono); margin-top:2px;">
+            <div style="font-size:0.7rem; color:#60a5fa; font-family:var(--font-mono); text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">
               SHA-256: ${ev.sha256Checksum ? ev.sha256Checksum.slice(0, 32) : 'c8f12a9e...'}...
             </div>
           </div>
         </div>
-        ${ev.measurements ? `<div style="font-size:0.78rem; color:#cbd5e1; margin-bottom:4px;"><strong>Diagnostic Reading:</strong> ${ev.measurements}</div>` : ''}
-        ${ev.technician ? `<div style="font-size:0.78rem; color:#94a3b8;"><strong>Signed by:</strong> ${ev.technician} (${new Date(ev.uploadedAt || Date.now()).toLocaleTimeString()})</div>` : ''}
+        ${ev.measurements ? `<div style="font-size:0.76rem; color:#cbd5e1; margin-bottom:2px;"><strong>Diagnostic:</strong> ${ev.measurements}</div>` : ''}
+        ${ev.technician ? `<div style="font-size:0.74rem; color:#94a3b8;"><strong>Signed by:</strong> ${ev.technician} (${new Date(ev.uploadedAt || Date.now()).toLocaleTimeString()})</div>` : ''}
       </div>
     `;
   }
@@ -406,65 +412,65 @@ function renderOfficerActionPane(ticket) {
   let actionButtons = '';
   if (ticket.status === 'SUBMITTED' || ticket.status === 'REOPENED') {
     actionButtons = `
-      <div style="display: flex; gap: 0.6rem; margin-top: 1rem;">
-        <button class="btn btn-primary" onclick="window.govFix.officerTriage('${ticket.id}')">✓ Supervisor Verify & Triage</button>
-        <button class="btn btn-danger" onclick="window.govFix.officerReject('${ticket.id}')">✗ Reject Invalid / Spam</button>
+      <div style="display: flex; gap: 0.5rem; margin-top: 0.8rem;">
+        <button class="btn btn-sm btn-primary" onclick="window.govFix.officerTriage('${ticket.id}')">Verify & Triage</button>
+        <button class="btn btn-sm btn-danger" onclick="window.govFix.officerReject('${ticket.id}')">Reject Invalid</button>
       </div>
     `;
   } else if (ticket.status === 'TRIAGED' || ticket.status === 'ESCALATED_L1') {
     actionButtons = `
-      <div style="margin-top: 1rem;">
-        <label style="font-size: 0.82rem; font-weight: 600; color: #9ca3af; margin-bottom: 0.3rem; display:block;">Select Qualified Campus Technician for Dispatch:</label>
-        <div style="display: flex; gap: 0.6rem; flex-wrap:wrap;">
+      <div style="margin-top: 0.8rem;">
+        <label style="font-size: 0.75rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.3rem; display:block; text-transform:uppercase;">Select Qualified Technician for Dispatch:</label>
+        <div style="display: flex; gap: 0.5rem; flex-wrap:wrap;">
           <select id="selectAssignee_${ticket.id}" class="form-select" style="max-width: 320px;">
             <option value="TECH_IT_SUPPORT_03">TECH_IT_SUPPORT_03 (Computer Labs & GPU Rig)</option>
             <option value="TECH_ELECTRICAL_01">TECH_ELECTRICAL_01 (Electrical Safety & Breakers)</option>
             <option value="TECH_PLUMBING_03">TECH_PLUMBING_03 (Hostel & Facilities Plumbing)</option>
-            <option value="TECH_NETWORKING_02">TECH_NETWORKING_02 (Campus Wi-Fi & Cisco APs)</option>
+            <option value="TECH_NETWORKING_02">TECH_NETWORKING_02 (Campus Wi-Fi & APs)</option>
             <option value="TECH_AV_SUPPORT_05">TECH_AV_SUPPORT_05 (Classroom Projector & Sound)</option>
           </select>
-          <button class="btn btn-primary" onclick="window.govFix.officerAssign('${ticket.id}')">🚀 Dispatch & Mark ASSIGNED</button>
+          <button class="btn btn-sm btn-primary" onclick="window.govFix.officerAssign('${ticket.id}')">Dispatch Technician</button>
         </div>
       </div>
     `;
   } else if (ticket.status === 'ASSIGNED') {
     actionButtons = `
-      <div style="display:flex; gap:0.6rem; margin-top: 1rem; flex-wrap:wrap;">
-        <button class="btn btn-warning" onclick="window.govFix.transition('${ticket.id}', 'IN_PROGRESS', 'TECH_OFFICER', 'OFFICER')">👷 [Simulate Tech] Accept & Start Work (IN_PROGRESS)</button>
-        <button class="btn btn-outline" onclick="window.govFix.technicianRejectAssignment('${ticket.id}')">✗ [Simulate Tech] Reject Assignment</button>
+      <div style="display:flex; gap:0.5rem; margin-top: 0.8rem; flex-wrap:wrap;">
+        <button class="btn btn-sm btn-warning" onclick="window.govFix.transition('${ticket.id}', 'IN_PROGRESS', 'TECH_OFFICER', 'OFFICER')">Accept & Start Work</button>
+        <button class="btn btn-sm btn-outline" onclick="window.govFix.technicianRejectAssignment('${ticket.id}')">Reject Assignment</button>
       </div>
     `;
   } else if (ticket.status === 'IN_PROGRESS' || ticket.status === 'ESCALATED_L2') {
     actionButtons = `
-      <div style="margin-top: 1rem;">
-        <button class="btn btn-warning" onclick="window.govFix.openEvidenceModal('${ticket.id}')">📎 Upload Repair Proof & Propose Closure (READY_FOR_CLOSURE)</button>
+      <div style="margin-top: 0.8rem;">
+        <button class="btn btn-sm btn-warning" onclick="window.govFix.openEvidenceModal('${ticket.id}')">Upload Proof & Propose Closure</button>
       </div>
     `;
   } else if (ticket.status === 'READY_FOR_CLOSURE' || ticket.status === 'INSPECTION_PENDING') {
     actionButtons = `
-      <div style="margin-top: 1rem;">
-        <button class="btn btn-success" onclick="window.govFix.supervisorApproveClosure('${ticket.id}')">🔍 Supervisor Verify Proof & Mark CLOSED</button>
+      <div style="margin-top: 0.8rem;">
+        <button class="btn btn-sm btn-success" onclick="window.govFix.supervisorApproveClosure('${ticket.id}')">Verify Proof & Mark CLOSED</button>
       </div>
     `;
   } else {
-    actionButtons = `<div style="margin-top: 1rem; color: #6ee7b7; font-size: 0.85rem;">✓ Ticket is in final state: <strong>${ticket.status}</strong></div>`;
+    actionButtons = `<div style="margin-top: 0.8rem; color: #6ee7b7; font-size: 0.82rem;">Ticket is in final state: <strong>${ticket.status}</strong></div>`;
   }
 
   container.innerHTML = `
-    <h3 style="font-size: 1.15rem; color: #fff; margin-bottom: 0.4rem;">${ticket.title}</h3>
-    <p style="font-size: 0.88rem; color: #9ca3af; margin-bottom: 1rem;">${ticket.description}</p>
+    <h3 style="font-size: 1.1rem; color: #fff; margin-bottom: 0.35rem;">${ticket.title}</h3>
+    <p style="font-size: 0.84rem; color: var(--text-muted); margin-bottom: 0.9rem;">${ticket.description}</p>
     
     <!-- AI Copilot Suggestion Box -->
-    <div class="ai-recommendation-box" style="background:rgba(37,99,235,0.08); border:1px solid rgba(37,99,235,0.25); padding:1rem; border-radius:8px; margin-bottom:1rem;">
-      <div style="display:flex; justify-content:space-between; margin-bottom:0.6rem;">
-        <span style="font-weight:700; color:#93c5fd; font-size:0.9rem;">🤖 AI Copilot Analysis (FreeLLMAPI)</span>
-        <span style="font-size:0.75rem; background:rgba(255,255,255,0.1); padding:2px 6px; border-radius:4px; color:#cbd5e1;">Advisory Only</span>
+    <div style="background:rgba(59,130,246,0.06); border:1px solid rgba(59,130,246,0.2); padding:0.85rem; border-radius:6px; margin-bottom:0.9rem;">
+      <div style="display:flex; justify-content:space-between; margin-bottom:0.45rem;">
+        <span style="font-weight:600; color:#93c5fd; font-size:0.82rem;">AI Advisory Copilot</span>
+        <span style="font-size:0.7rem; color:var(--text-dim);">Non-Binding</span>
       </div>
-      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.6rem; font-size:0.8rem;">
-        <div><span style="color:#64748b;">Predicted Category:</span> <strong style="color:#e2e8f0;">${ticket.aiRecommendation?.category || ticket.category}</strong></div>
-        <div><span style="color:#64748b;">Urgency Priority:</span> <strong style="color:#e2e8f0;">${ticket.aiRecommendation?.urgency || ticket.urgency}</strong></div>
-        <div><span style="color:#64748b;">Target Room / Facility:</span> <strong style="color:#e2e8f0;">${ticket.aiRecommendation?.roomId || ticket.roomId || ticket.ward}</strong></div>
-        <div><span style="color:#64748b;">Suggested Technician:</span> <strong style="color:#e2e8f0;">${ticket.aiRecommendation?.suggestedOfficer || 'TECH_IT_SUPPORT_03'}</strong></div>
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.4rem 0.8rem; font-size:0.78rem;">
+        <div><span style="color:var(--text-dim);">Category:</span> <strong style="color:#e2e8f0;">${ticket.aiRecommendation?.category || ticket.category}</strong></div>
+        <div><span style="color:var(--text-dim);">Priority:</span> <strong style="color:#e2e8f0;">${ticket.aiRecommendation?.urgency || ticket.urgency}</strong></div>
+        <div><span style="color:var(--text-dim);">Facility:</span> <strong style="color:#e2e8f0;">${ticket.aiRecommendation?.roomId || ticket.roomId || ticket.ward}</strong></div>
+        <div><span style="color:var(--text-dim);">Suggested Tech:</span> <strong style="color:#e2e8f0;">${ticket.aiRecommendation?.suggestedOfficer || 'TECH_IT_SUPPORT_03'}</strong></div>
       </div>
       ${dupHtml}
     </div>
@@ -934,7 +940,7 @@ window.govFix = {
     if (locEl) locEl.value = s.location;
     if (descEl) descEl.value = s.desc;
 
-    showToast(`📝 Loaded sample request: ${s.location}`);
+    showToast(`Loaded sample request: ${s.location}`);
   },
 
   filterCategory: (cat) => {
@@ -984,7 +990,7 @@ window.govFix = {
         fileSize: '1.6 MB',
         measurements: '12V Rail: 12.08V Stable, 5V Rail: 5.02V, Temperature: 48°C Under Load',
         sha256Checksum: 'c8f12a9e4b77d810a9c8e11a2f3b901a88b4923e1cf802198c6014e30b8d810f',
-        iconEmoji: '📸',
+        iconEmoji: 'IMG',
         notes: 'Replaced burnt 750W SMPS unit with new Corsair Bronze unit. Cleaned GPU heat sink and conducted 2-hour stress benchmark.',
       },
       voltage: {
@@ -992,7 +998,7 @@ window.govFix = {
         fileSize: '840 KB',
         measurements: 'Insulation Resistance: >100 MΩ, Trip Time: 18ms @ 30mA leakage',
         sha256Checksum: '7fa33d8c1192b0c39f04128a1b5c90d810238120e89104b2c892019c0182390f',
-        iconEmoji: '⚡',
+        iconEmoji: 'PDF',
         notes: 'Replaced spark-eroded contactors on 3-phase test bench breaker. Conducted insulation resistance and earth continuity tests.',
       },
       hdmi: {
@@ -1000,7 +1006,7 @@ window.govFix = {
         fileSize: '2.1 MB',
         measurements: 'Lamp Hours: 12 hrs, Lumen Output: 3600 ANSI, Res: 1920x1080 @ 60Hz',
         sha256Checksum: '3d8a1c90f23b10c92018a38190d7821c90281b30e8401928374019283019283a',
-        iconEmoji: '📽️',
+        iconEmoji: 'IMG',
         notes: 'Replaced damaged optical HDMI transmitter cable. Calibrated RGB color balance and keystone distortion.',
       },
       pump: {
@@ -1008,7 +1014,7 @@ window.govFix = {
         fileSize: '2.4 MB',
         measurements: 'Water Pressure: 3.5 Bar (Nominal Operating Range), Current: 6.2A',
         sha256Checksum: 'a4f91b7e8c32d90e8a72b6c11d33f20a5e8841209b5d8431e7c91a32b901fc4e',
-        iconEmoji: '🚰',
+        iconEmoji: 'IMG',
         notes: 'Replaced 45µF starter capacitor on Kirloskar 2HP booster pump. Tested pressure at 3.5 bar across 4th-floor hostel blocks.',
       },
     };
@@ -1036,8 +1042,7 @@ window.govFix = {
     if (!file) return;
 
     const isPdf = file.name.endsWith('.pdf');
-    const isImg = file.type.startsWith('image/');
-    const icon = isPdf ? '📄' : isImg ? '📸' : '📎';
+    const icon = isPdf ? 'PDF' : 'IMG';
 
     // Simulated cryptographic hash from file metadata
     const seed = `${file.name}-${file.size}-${Date.now()}`;
@@ -1067,7 +1072,7 @@ window.govFix = {
     if (hashEl) hashEl.textContent = currentEvidence.sha256Checksum.slice(0, 36) + '...';
     if (iconEl) iconEl.textContent = currentEvidence.iconEmoji;
 
-    showToast(`📎 File attached: ${file.name} (SHA-256 computed)`);
+    showToast(`Attached file: ${file.name}`);
   },
 
   submitEvidenceProposal: async () => {
@@ -1083,7 +1088,7 @@ window.govFix = {
       fileName: currentEvidence.fileName || 'repair_proof.jpg',
       fileSize: currentEvidence.fileSize || '1.5 MB',
       sha256Checksum: currentEvidence.sha256Checksum || 'c8f12a9e4b77d810a9c8e11a2f3b901a88b4923e1cf802198c6014e30b8d810f',
-      iconEmoji: currentEvidence.iconEmoji || '📸',
+      iconEmoji: currentEvidence.iconEmoji || 'PROOF',
       measurements: measurements,
       notes: notes,
       technician: 'TECH_CAMPUS_SUPPORT',
@@ -1097,7 +1102,7 @@ window.govFix = {
     });
 
     window.govFix.closeEvidenceModal();
-    showToast('📸 Verified repair proof & SHA-256 hash attached! Ticket is READY_FOR_CLOSURE.');
+    showToast('Repair proof & SHA-256 hash attached. Ticket is READY_FOR_CLOSURE.');
   },
 
   advanceTime,
@@ -1108,7 +1113,7 @@ function showToast(message, isError = false) {
   const toast = document.getElementById('toastNotification');
   if (!toast) return;
   toast.textContent = message;
-  toast.style.borderColor = isError ? '#ef4444' : '#10b981';
+  toast.style.borderColor = isError ? 'var(--accent-rose)' : 'var(--accent-emerald)';
   toast.classList.remove('hidden');
 
   setTimeout(() => {
