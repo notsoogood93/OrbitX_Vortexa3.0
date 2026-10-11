@@ -127,6 +127,10 @@ export class SLAManager {
 
         if (transition.success) {
           ticket.status = STATES.ESCALATED_L2;
+          ticket.isEscalated = true;
+          ticket.escalationLevel = 'L2';
+          ticket.underlyingStatus = transition.from;
+          ticket.escalatedAt = now.toISOString();
           ticket.updatedAt = now.toISOString();
           auditLedger.logEvent({
             eventType: 'AUTO_ESCALATION_L2',
@@ -136,7 +140,7 @@ export class SLAManager {
             details: {
               previousStatus: transition.from,
               newStatus: STATES.ESCALATED_L2,
-              reason: 'Overdue SLA passed Municipal Commissioner threshold.',
+              reason: 'Overdue SLA passed Campus Registrar escalation threshold.',
               virtualSimTime: now.toISOString(),
             },
           });
@@ -148,11 +152,15 @@ export class SLAManager {
           STATES.ESCALATED_L1,
           'SLA_DAEMON',
           ROLES.SYSTEM_DAEMON,
-          { reason: `Tier-1 SLA Breach: Exceeded Ward Officer response time.` }
+          { reason: `Tier-1 SLA Breach: Exceeded Department Supervisor response time.` }
         );
 
         if (transition.success) {
           ticket.status = STATES.ESCALATED_L1;
+          ticket.isEscalated = true;
+          ticket.escalationLevel = 'L1';
+          ticket.underlyingStatus = transition.from;
+          ticket.escalatedAt = now.toISOString();
           ticket.updatedAt = now.toISOString();
           auditLedger.logEvent({
             eventType: 'AUTO_ESCALATION_L1',
@@ -162,7 +170,7 @@ export class SLAManager {
             details: {
               previousStatus: transition.from,
               newStatus: STATES.ESCALATED_L1,
-              reason: 'Response SLA passed Ward Officer threshold.',
+              reason: 'Overdue SLA passed Department Supervisor response threshold.',
               virtualSimTime: now.toISOString(),
             },
           });

@@ -280,28 +280,82 @@ app.patch('/api/requests/:id/status', (req, res) => {
 });
 
 /**
- * Specific Table 5 API Endpoints (Section 9.2 in PDF)
+ * Specific Table 5 API Endpoints (Section 9.2 in Official Spec)
  */
-// 1. Assign Officer / Technician
-app.post('/api/requests/:id/assign', (req, res) => {
+
+// 0. User Authentication (Section 9.2 Table 5: POST /auth/login)
+const handleAuthLogin = (req, res) => {
+  const { email, role } = req.body || {};
+  const userRole = role || (email && email.includes('admin') ? ROLES.ADMINISTRATOR : email && email.includes('hod') ? ROLES.SUPERVISOR : email && email.includes('tech') ? ROLES.OFFICER : ROLES.REQUESTER);
+  const user = {
+    id: `USR-${Math.floor(1000 + Math.random() * 9000)}`,
+    name: email ? email.split('@')[0].replace('.', ' ') : 'Campus User',
+    email: email || 'user@dypit.edu.in',
+    role: userRole,
+    departmentId: 'DEPT-CAMPUS-MAINTENANCE',
+    token: `govfix-jwt-${Buffer.from(email || 'user').toString('base64')}`,
+  };
+  return res.json({ success: true, token: user.token, user });
+};
+app.post('/api/auth/login', handleAuthLogin);
+app.post('/auth/login', handleAuthLogin);
+
+// 1. Assign Officer / Technician (Section 9.2 Table 5: POST /requests/{id}/assign)
+const handleAssignOfficer = (req, res) => {
   const { officerId, actor, role } = req.body;
   processTransition(req, res, STATES.ASSIGNED, actor || 'SUPERVISOR', role || ROLES.SUPERVISOR, {
     assignedOfficerId: officerId,
     assignedEngineerId: officerId,
   });
-});
+};
+app.post('/api/requests/:id/assign', handleAssignOfficer);
+app.post('/requests/:id/assign', handleAssignOfficer);
 
-// 2. Officer Accept or Reject Assignment Decision
-app.post('/api/assignments/:id/decision', (req, res) => {
+// 2. Officer Accept or Reject Assignment Decision (Section 9.2 Table 5: POST /assignments/{id}/decision)
+const handleAssignmentDecision = (req, res) => {
   const { decision, reason, actor } = req.body; // decision: 'ACCEPT' or 'REJECT'
   const targetState = decision === 'ACCEPT' ? STATES.ACCEPTED : STATES.TRIAGED;
   processTransition(req, res, targetState, actor || 'OFFICER', ROLES.OFFICER, {
     rejectionReason: reason,
   });
-});
+};
+app.post('/api/assignments/:id/decision', handleAssignmentDecision);
+app.post('/assignments/:id/decision', handleAssignmentDecision);
 
-// 3. Propose Closure & Evidence Attachment
-app.post('/api/requests/:id/closure-proposal', (req, res) => {
+// 3. Record Action (Section 9.2 Table 5: POST /requests/{id}/actions)
+const handleRecordAction = (req, res) => {
+  const { actionType, notes, evidenceAttachmentId, evidence, actor, role } = req.body;
+  const ticket = grievances.find((g) => g.id === req.params.id);
+  if (!ticket) return res.status(404).json({ success: false, error: 'Request not found' });
+
+  if (!ticket.actions) ticket.actions = [];
+  const actionRecord = {
+    id: `ACT-${Date.now()}`,
+    actionType: actionType || 'FIELD_INSPECTION_REPAIR',
+    notes: notes || 'Technician diagnostic examination & repair work performed.',
+    evidenceAttachmentId: evidenceAttachmentId || (evidence ? evidence.sha256Checksum : null),
+    actor: actor || ticket.assignedEngineerId || 'TECH_OFFICER',
+    role: role || ROLES.OFFICER,
+    performedAt: slaManager.getCurrentTime().toISOString(),
+  };
+  ticket.actions.push(actionRecord);
+  ticket.updatedAt = actionRecord.performedAt;
+
+  auditLedger.logEvent({
+    eventType: 'ACTION_RECORDED',
+    actor: actionRecord.actor,
+    role: actionRecord.role,
+    grievanceId: ticket.id,
+    details: actionRecord,
+  });
+
+  return res.json({ success: true, action: actionRecord, ticket });
+};
+app.post('/api/requests/:id/actions', handleRecordAction);
+app.post('/requests/:id/actions', handleRecordAction);
+
+// 4. Propose Closure & Evidence Attachment (Section 9.2 Table 5: POST /requests/{id}/closure-proposal)
+const handleClosureProposal = (req, res) => {
   const { workNotes, evidence, evidenceAttachment, actor } = req.body;
   const attachment = evidenceAttachment || evidence;
   const notes = workNotes || (attachment && attachment.notes) || (typeof evidence === 'string' ? evidence : 'Physical repair verified & completed');
@@ -310,8 +364,11 @@ app.post('/api/requests/:id/closure-proposal', (req, res) => {
     evidenceAttachment: attachment,
     evidence: attachment,
   });
-});
+};
+app.post('/api/requests/:id/closure-proposal', handleClosureProposal);
+app.post('/requests/:id/closure-proposal', handleClosureProposal);
 
+// Evidence upload endpoint
 app.post('/api/requests/:id/evidence', (req, res) => {
   const { evidence, evidenceAttachment, workNotes, actor } = req.body;
   const attachment = evidenceAttachment || evidence;
@@ -329,36 +386,58 @@ app.post('/api/requests/:id/evidence', (req, res) => {
   });
   return res.json({ success: true, ticket });
 });
+app.post('/requests/:id/evidence', (req, res) => {
+  const { evidence, evidenceAttachment, workNotes, actor } = req.body;
+  const attachment = evidenceAttachment || evidence;
+  const ticket = grievances.find((g) => g.id === req.params.id);
+  if (!ticket) return res.status(404).json({ success: false, error: 'Request not found' });
+  ticket.evidenceAttachment = attachment;
+  if (workNotes) ticket.workNotes = workNotes;
+  ticket.updatedAt = slaManager.getCurrentTime().toISOString();
+  auditLedger.logEvent({
+    eventType: 'EVIDENCE_ATTACHED',
+    actor: actor || 'TECH_OFFICER',
+    role: ROLES.OFFICER,
+    grievanceId: ticket.id,
+    details: { attachment, workNotes },
+  });
+  return res.json({ success: true, ticket });
+});
 
-
-// 4. Closure Decision (Approve / Reject)
-app.post('/api/closures/:id/decision', (req, res) => {
+// 5. Closure Decision (Approve / Reject) (Section 9.2 Table 5: POST /closures/{id}/decision)
+const handleClosureDecision = (req, res) => {
   const { approved, rating, actor, role } = req.body;
   const targetState = approved ? STATES.CLOSED : STATES.IN_PROGRESS;
   processTransition(req, res, targetState, actor || 'SUPERVISOR', role || ROLES.SUPERVISOR, {
     rating,
   });
-});
+};
+app.post('/api/closures/:id/decision', handleClosureDecision);
+app.post('/closures/:id/decision', handleClosureDecision);
 
-// 5. Reopen Request
-app.post('/api/requests/:id/reopen', (req, res) => {
+// 6. Reopen Request (Section 9.2 Table 5: POST /requests/{id}/reopen)
+const handleReopenRequest = (req, res) => {
   const { reason, actor } = req.body;
   processTransition(req, res, STATES.REOPENED, actor || 'REQUESTER', ROLES.REQUESTER, {
     reopenReason: reason,
   });
-});
+};
+app.post('/api/requests/:id/reopen', handleReopenRequest);
+app.post('/requests/:id/reopen', handleReopenRequest);
 
-// 6. Oversight Overdue Dashboard
-app.get('/api/oversight/overdue', (req, res) => {
+// 7. Oversight Overdue Dashboard (Section 9.2 Table 5: GET /oversight/overdue)
+const handleOversightOverdue = (req, res) => {
   const overdue = grievances.filter((t) => {
     const sla = slaManager.getTicketSLAStatus(t);
-    return sla.isOverdue || t.status === STATES.ESCALATED_L1 || t.status === STATES.ESCALATED_L2;
+    return sla.isOverdue || t.status === STATES.ESCALATED_L1 || t.status === STATES.ESCALATED_L2 || t.isEscalated;
   });
   res.json({ totalOverdue: overdue.length, overdue });
-});
+};
+app.get('/api/oversight/overdue', handleOversightOverdue);
+app.get('/oversight/overdue', handleOversightOverdue);
 
-// 7. Oversight Recurrences Dashboard
-app.get('/api/oversight/recurrences', (req, res) => {
+// 8. Oversight Recurrences Dashboard (Section 9.2 Table 5: GET /oversight/recurrences)
+const handleOversightRecurrences = (req, res) => {
   const roomCounts = {};
   grievances.forEach((t) => {
     const r = t.roomId || t.ward;
@@ -369,14 +448,32 @@ app.get('/api/oversight/recurrences', (req, res) => {
     .map(([roomId, count]) => ({ roomId, count }));
 
   res.json({ candidates });
-});
+};
+app.get('/api/oversight/recurrences', handleOversightRecurrences);
+app.get('/oversight/recurrences', handleOversightRecurrences);
 
-// 8. AI Suggest (Non-authoritative sidecar)
-app.post('/api/ai/suggest', async (req, res) => {
+// 9. AI Suggest (Section 9.2 Table 5: POST /ai/suggest)
+const handleAiSuggest = async (req, res) => {
   const { text } = req.body;
   const analysis = await aiCopilot.analyzeGrievance(text || '', grievances);
   res.json(analysis);
+};
+app.post('/api/ai/suggest', handleAiSuggest);
+app.post('/ai/suggest', handleAiSuggest);
+
+// Direct Table 5 aliases for GET /requests, POST /requests, GET /requests/:id, PATCH /requests/:id/status
+app.get('/requests', handleGetRequests);
+app.post('/requests', handleCreateRequest);
+app.get('/requests/:id', handleGetRequestById);
+app.patch('/requests/:id/status', (req, res) => {
+  const { targetState, actor, role, payload } = req.body;
+  processTransition(req, res, targetState, actor, role, payload);
 });
+app.post('/requests/:id/status', (req, res) => {
+  const { targetState, actor, role, payload } = req.body;
+  processTransition(req, res, targetState, actor, role, payload);
+});
+
 
 /**
  * POST /api/simulation/time-travel

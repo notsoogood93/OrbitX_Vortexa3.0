@@ -5,12 +5,14 @@
  */
 
 export const STATES = {
+  DRAFT: 'DRAFT',
   SUBMITTED: 'SUBMITTED',
   TRIAGED: 'TRIAGED',
   REJECTED_INVALID: 'REJECTED_INVALID',
   ASSIGNED: 'ASSIGNED',
   ACCEPTED: 'ACCEPTED',
   IN_PROGRESS: 'IN_PROGRESS',
+  AWAITING_REQUESTER: 'AWAITING_REQUESTER',
   INSPECTION_PENDING: 'INSPECTION_PENDING',
   READY_FOR_CLOSURE: 'READY_FOR_CLOSURE',
   RESOLVED: 'RESOLVED',
@@ -53,6 +55,19 @@ export function normalizeRole(role) {
  * Transition Rule Definitions
  */
 export const TRANSITIONS = [
+  // 0. Submit Draft: DRAFT -> SUBMITTED
+  {
+    from: [STATES.DRAFT],
+    to: STATES.SUBMITTED,
+    allowedRoles: [ROLES.REQUESTER, ROLES.CITIZEN],
+    validate: (ticket, payload) => {
+      if (!ticket.description && !payload.description) {
+        return { valid: false, code: 'ERR_MISSING_DESCRIPTION', message: 'Request description required.' };
+      }
+      return { valid: true };
+    },
+  },
+
   // 1. Triage: SUBMITTED -> TRIAGED
   {
     from: [STATES.SUBMITTED],
@@ -115,15 +130,23 @@ export const TRANSITIONS = [
 
   // 6. Begin Work: ACCEPTED / ASSIGNED / ESCALATED -> IN_PROGRESS
   {
-    from: [STATES.ASSIGNED, STATES.ACCEPTED, STATES.ESCALATED_L1, STATES.ESCALATED_L2],
+    from: [STATES.ASSIGNED, STATES.ACCEPTED, STATES.ESCALATED_L1, STATES.ESCALATED_L2, STATES.AWAITING_REQUESTER],
     to: STATES.IN_PROGRESS,
     allowedRoles: [ROLES.OFFICER, ROLES.FIELD_ENGINEER, ROLES.ADMINISTRATOR, ROLES.SUPERVISING_COMMISSIONER],
     validate: () => ({ valid: true }),
   },
 
-  // 7. Work Finished / Propose Closure: IN_PROGRESS -> READY_FOR_CLOSURE (or INSPECTION_PENDING)
+  // 6b. Request Clarification: IN_PROGRESS -> AWAITING_REQUESTER
   {
     from: [STATES.IN_PROGRESS],
+    to: STATES.AWAITING_REQUESTER,
+    allowedRoles: [ROLES.OFFICER, ROLES.FIELD_ENGINEER, ROLES.SUPERVISOR, ROLES.ADMINISTRATOR],
+    validate: () => ({ valid: true }),
+  },
+
+  // 7. Work Finished / Propose Closure: IN_PROGRESS / AWAITING_REQUESTER -> READY_FOR_CLOSURE (or INSPECTION_PENDING)
+  {
+    from: [STATES.IN_PROGRESS, STATES.AWAITING_REQUESTER],
     to: STATES.READY_FOR_CLOSURE,
     allowedRoles: [ROLES.OFFICER, ROLES.FIELD_ENGINEER],
     validate: (ticket, payload) => {
