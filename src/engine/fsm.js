@@ -1,6 +1,7 @@
 /**
  * GovFix Finite State Machine (FSM) & Role Authorization Engine
- * Enforces strict transitions, role gates, and emits immutable refusal reasons.
+ * Supports both University Campus Track (DY Patil) & Municipal Track (PCMC/PMC).
+ * Enforces strict transitions, role gates, and emits immutable refusal reasons with exact HTTP status codes.
  */
 
 export const STATES = {
@@ -8,9 +9,12 @@ export const STATES = {
   TRIAGED: 'TRIAGED',
   REJECTED_INVALID: 'REJECTED_INVALID',
   ASSIGNED: 'ASSIGNED',
+  ACCEPTED: 'ACCEPTED',
   IN_PROGRESS: 'IN_PROGRESS',
   INSPECTION_PENDING: 'INSPECTION_PENDING',
+  READY_FOR_CLOSURE: 'READY_FOR_CLOSURE',
   RESOLVED: 'RESOLVED',
+  CLOSED: 'CLOSED',
   CITIZEN_CONFIRMED: 'CITIZEN_CONFIRMED',
   REOPENED: 'REOPENED',
   ESCALATED_L1: 'ESCALATED_L1',
@@ -18,136 +22,212 @@ export const STATES = {
 };
 
 export const ROLES = {
+  // University Campus Roles
+  REQUESTER: 'REQUESTER',
+  SUPERVISOR: 'SUPERVISOR',
+  OFFICER: 'OFFICER',
+  ADMINISTRATOR: 'ADMINISTRATOR',
+
+  // Municipal Equivalents (full backward compatibility)
   CITIZEN: 'CITIZEN',
   WARD_OFFICER: 'WARD_OFFICER',
   FIELD_ENGINEER: 'FIELD_ENGINEER',
   SUPERVISING_COMMISSIONER: 'SUPERVISING_COMMISSIONER',
+
+  // System
   SYSTEM_DAEMON: 'SYSTEM_DAEMON',
 };
 
+// Role alias normalization helper
+export function normalizeRole(role) {
+  if (!role) return ROLES.REQUESTER;
+  const upper = role.toUpperCase();
+  if (upper === 'CITIZEN' || upper === 'STUDENT' || upper === 'FACULTY') return ROLES.REQUESTER;
+  if (upper === 'WARD_OFFICER' || upper === 'HOD' || upper === 'ESTATE_OFFICER') return ROLES.SUPERVISOR;
+  if (upper === 'FIELD_ENGINEER' || upper === 'TECHNICIAN' || upper === 'ENGINEER') return ROLES.OFFICER;
+  if (upper === 'SUPERVISING_COMMISSIONER' || upper === 'REGISTRAR' || upper === 'DIRECTOR') return ROLES.ADMINISTRATOR;
+  return upper;
+}
+
 /**
  * Transition Rule Definitions
- * Each valid transition specifies allowed current states, permitted roles, and validator callbacks.
  */
 export const TRANSITIONS = [
+  // 1. Triage: SUBMITTED -> TRIAGED
   {
     from: [STATES.SUBMITTED],
     to: STATES.TRIAGED,
-    allowedRoles: [ROLES.WARD_OFFICER, ROLES.SUPERVISING_COMMISSIONER],
-    validate: (grievance, payload) => {
-      if (!payload.category || !payload.ward || !payload.urgency) {
-        return { valid: false, code: 'ERR_INCOMPLETE_PREREQUISITE', message: 'Triage requires verified Category, Ward, and Urgency.' };
+    allowedRoles: [ROLES.SUPERVISOR, ROLES.ADMINISTRATOR, ROLES.WARD_OFFICER, ROLES.SUPERVISING_COMMISSIONER],
+    validate: (ticket, payload) => {
+      if (!payload.category && !ticket.category) {
+        return { valid: false, code: 'ERR_INCOMPLETE_PREREQUISITE', message: 'Triage requires a verified category.' };
       }
       return { valid: true };
     },
   },
+
+  // 2. Reject Invalid/Spam: SUBMITTED -> REJECTED_INVALID
   {
     from: [STATES.SUBMITTED],
     to: STATES.REJECTED_INVALID,
-    allowedRoles: [ROLES.WARD_OFFICER, ROLES.SUPERVISING_COMMISSIONER],
-    validate: (grievance, payload) => {
+    allowedRoles: [ROLES.SUPERVISOR, ROLES.ADMINISTRATOR, ROLES.WARD_OFFICER, ROLES.SUPERVISING_COMMISSIONER],
+    validate: (ticket, payload) => {
       if (!payload.rejectionReason || payload.rejectionReason.trim().length < 5) {
-        return { valid: false, code: 'ERR_MISSING_JUSTIFICATION', message: 'Rejecting a grievance requires an explicit justification of at least 5 characters.' };
+        return { valid: false, code: 'ERR_MISSING_JUSTIFICATION', message: 'Rejecting a request requires an explicit justification of at least 5 characters.' };
       }
       return { valid: true };
     },
   },
+
+  // 3. Assign Technician: TRIAGED / ESCALATED_L1 -> ASSIGNED
   {
     from: [STATES.TRIAGED, STATES.ESCALATED_L1],
     to: STATES.ASSIGNED,
-    allowedRoles: [ROLES.WARD_OFFICER, ROLES.SUPERVISING_COMMISSIONER],
-    validate: (grievance, payload) => {
-      if (!payload.assignedEngineerId) {
-        return { valid: false, code: 'ERR_MISSING_ASSIGNEE', message: 'Assignment requires a valid Field Engineer ID.' };
+    allowedRoles: [ROLES.SUPERVISOR, ROLES.ADMINISTRATOR, ROLES.WARD_OFFICER, ROLES.SUPERVISING_COMMISSIONER],
+    validate: (ticket, payload) => {
+      if (!payload.assignedEngineerId && !payload.assignedOfficerId) {
+        return { valid: false, code: 'ERR_MISSING_ASSIGNEE', message: 'Assignment requires a valid Officer / Technician ID.' };
       }
       return { valid: true };
     },
   },
+
+  // 4. Officer Accepts Assignment: ASSIGNED -> ACCEPTED
   {
-    from: [STATES.ASSIGNED, STATES.ESCALATED_L1, STATES.ESCALATED_L2],
-    to: STATES.IN_PROGRESS,
-    allowedRoles: [ROLES.FIELD_ENGINEER, ROLES.SUPERVISING_COMMISSIONER],
+    from: [STATES.ASSIGNED],
+    to: STATES.ACCEPTED,
+    allowedRoles: [ROLES.OFFICER, ROLES.FIELD_ENGINEER],
     validate: () => ({ valid: true }),
+  },
+
+  // 5. Officer Rejects Assignment: ASSIGNED -> TRIAGED (Rejection reason retained)
+  {
+    from: [STATES.ASSIGNED],
+    to: STATES.TRIAGED,
+    allowedRoles: [ROLES.OFFICER, ROLES.FIELD_ENGINEER],
+    validate: (ticket, payload) => {
+      if (!payload.rejectionReason || payload.rejectionReason.trim().length < 5) {
+        return { valid: false, code: 'ERR_MISSING_JUSTIFICATION', message: 'Officer assignment rejection requires an explicit reason (minimum 5 chars).' };
+      }
+      return { valid: true };
+    },
+  },
+
+  // 6. Begin Work: ACCEPTED / ASSIGNED / ESCALATED -> IN_PROGRESS
+  {
+    from: [STATES.ASSIGNED, STATES.ACCEPTED, STATES.ESCALATED_L1, STATES.ESCALATED_L2],
+    to: STATES.IN_PROGRESS,
+    allowedRoles: [ROLES.OFFICER, ROLES.FIELD_ENGINEER, ROLES.ADMINISTRATOR, ROLES.SUPERVISING_COMMISSIONER],
+    validate: () => ({ valid: true }),
+  },
+
+  // 7. Work Finished / Propose Closure: IN_PROGRESS -> READY_FOR_CLOSURE (or INSPECTION_PENDING)
+  {
+    from: [STATES.IN_PROGRESS],
+    to: STATES.READY_FOR_CLOSURE,
+    allowedRoles: [ROLES.OFFICER, ROLES.FIELD_ENGINEER],
+    validate: (ticket, payload) => {
+      if (!payload.workNotes || payload.workNotes.trim().length < 5) {
+        return { valid: false, code: 'ERR_MISSING_EVIDENCE', message: 'Proposing closure requires detailed work completion notes / evidence.' };
+      }
+      return { valid: true };
+    },
   },
   {
     from: [STATES.IN_PROGRESS],
     to: STATES.INSPECTION_PENDING,
-    allowedRoles: [ROLES.FIELD_ENGINEER],
-    validate: (grievance, payload) => {
+    allowedRoles: [ROLES.OFFICER, ROLES.FIELD_ENGINEER],
+    validate: (ticket, payload) => {
       if (!payload.workNotes || payload.workNotes.trim().length < 5) {
-        return { valid: false, code: 'ERR_MISSING_EVIDENCE', message: 'Marking work complete requires detailed field work notes.' };
+        return { valid: false, code: 'ERR_MISSING_EVIDENCE', message: 'Work completion requires detailed inspection/repair notes.' };
       }
       return { valid: true };
     },
+  },
+
+  // 8. Closure Approval: READY_FOR_CLOSURE / INSPECTION_PENDING -> CLOSED (or RESOLVED)
+  {
+    from: [STATES.READY_FOR_CLOSURE, STATES.INSPECTION_PENDING, STATES.ESCALATED_L2],
+    to: STATES.CLOSED,
+    allowedRoles: [ROLES.SUPERVISOR, ROLES.ADMINISTRATOR, ROLES.WARD_OFFICER, ROLES.SUPERVISING_COMMISSIONER, ROLES.REQUESTER, ROLES.CITIZEN],
+    validate: () => ({ valid: true }),
   },
   {
-    from: [STATES.INSPECTION_PENDING, STATES.ESCALATED_L2],
+    from: [STATES.READY_FOR_CLOSURE, STATES.INSPECTION_PENDING, STATES.ESCALATED_L2],
     to: STATES.RESOLVED,
-    allowedRoles: [ROLES.WARD_OFFICER, ROLES.SUPERVISING_COMMISSIONER],
-    validate: (grievance, payload) => {
-      if (!payload.inspectionNotes) {
-        return { valid: false, code: 'ERR_INSPECTION_REQUIRED', message: 'Resolution sign-off requires officer inspection notes.' };
-      }
-      return { valid: true };
-    },
+    allowedRoles: [ROLES.SUPERVISOR, ROLES.ADMINISTRATOR, ROLES.WARD_OFFICER, ROLES.SUPERVISING_COMMISSIONER],
+    validate: () => ({ valid: true }),
   },
+
+  // 9. Requester Confirmation: RESOLVED -> CITIZEN_CONFIRMED / CLOSED
   {
     from: [STATES.RESOLVED],
     to: STATES.CITIZEN_CONFIRMED,
-    allowedRoles: [ROLES.CITIZEN],
+    allowedRoles: [ROLES.REQUESTER, ROLES.CITIZEN],
     validate: () => ({ valid: true }),
   },
   {
-    from: [STATES.RESOLVED],
+    from: [STATES.RESOLVED, STATES.CITIZEN_CONFIRMED],
+    to: STATES.CLOSED,
+    allowedRoles: [ROLES.REQUESTER, ROLES.CITIZEN, ROLES.SUPERVISOR, ROLES.ADMINISTRATOR],
+    validate: () => ({ valid: true }),
+  },
+
+  // 10. Reopen Closed Request: CLOSED / RESOLVED -> REOPENED
+  {
+    from: [STATES.CLOSED, STATES.RESOLVED],
     to: STATES.REOPENED,
-    allowedRoles: [ROLES.CITIZEN],
-    validate: (grievance, payload) => {
+    allowedRoles: [ROLES.REQUESTER, ROLES.CITIZEN],
+    validate: (ticket, payload) => {
       if (!payload.reopenReason) {
-        return { valid: false, code: 'ERR_REOPEN_JUSTIFICATION', message: 'Citizen reopen requires explanation of dissatisfaction.' };
+        return { valid: false, code: 'ERR_REOPEN_JUSTIFICATION', message: 'Reopening requires an explanation of dissatisfaction.' };
       }
       return { valid: true };
     },
   },
+
+  // 11. Reopened to Triage
   {
     from: [STATES.REOPENED],
     to: STATES.TRIAGED,
-    allowedRoles: [ROLES.WARD_OFFICER, ROLES.SUPERVISING_COMMISSIONER],
+    allowedRoles: [ROLES.SUPERVISOR, ROLES.ADMINISTRATOR, ROLES.WARD_OFFICER, ROLES.SUPERVISING_COMMISSIONER],
     validate: () => ({ valid: true }),
   },
-  // Escalations (SLA breach triggers)
+
+  // 12. Dynamic SLA Escalations (Daemon / Admin)
   {
-    from: [STATES.SUBMITTED, STATES.TRIAGED, STATES.ASSIGNED],
+    from: [STATES.SUBMITTED, STATES.TRIAGED, STATES.ASSIGNED, STATES.ACCEPTED],
     to: STATES.ESCALATED_L1,
-    allowedRoles: [ROLES.SYSTEM_DAEMON, ROLES.SUPERVISING_COMMISSIONER],
+    allowedRoles: [ROLES.SYSTEM_DAEMON, ROLES.ADMINISTRATOR, ROLES.SUPERVISING_COMMISSIONER],
     validate: () => ({ valid: true }),
   },
   {
     from: [STATES.IN_PROGRESS, STATES.ESCALATED_L1],
     to: STATES.ESCALATED_L2,
-    allowedRoles: [ROLES.SYSTEM_DAEMON, ROLES.SUPERVISING_COMMISSIONER],
+    allowedRoles: [ROLES.SYSTEM_DAEMON, ROLES.ADMINISTRATOR, ROLES.SUPERVISING_COMMISSIONER],
     validate: () => ({ valid: true }),
   },
 ];
 
 export class WorkflowFSM {
   /**
-   * Attempts to execute a state transition.
-   * If valid: returns { success: true, from, to, payload }.
-   * If invalid: returns { success: false, code, reason }.
+   * Evaluates state transition and role authority.
    */
-  static attemptTransition(grievance, targetState, actor, role, payload = {}) {
-    const currentState = grievance.status;
+  static attemptTransition(ticket, targetState, actor, rawRole, payload = {}) {
+    const currentState = ticket.status;
+    const role = normalizeRole(rawRole);
 
-    // 1. Check if target state is a recognized system state
+    // 1. Check if target state is valid
     if (!Object.values(STATES).includes(targetState)) {
       return {
         success: false,
+        httpStatus: 422,
         code: 'ERR_UNKNOWN_STATE',
         reason: `Target state '${targetState}' is not a recognized workflow state.`,
       };
     }
 
-    // 2. Find matching transition rule
+    // 2. Find matching transition
     const matchingRule = TRANSITIONS.find(
       (rule) => rule.from.includes(currentState) && rule.to === targetState
     );
@@ -155,25 +235,32 @@ export class WorkflowFSM {
     if (!matchingRule) {
       return {
         success: false,
+        httpStatus: 409, // HTTP 409 Conflict as required by Section 9.3
         code: 'ERR_ILLEGAL_STATE_JUMP',
-        reason: `Direct transition from '${currentState}' to '${targetState}' is prohibited by municipal governance policy. Skipped steps are refused.`,
+        reason: `Direct transition from '${currentState}' to '${targetState}' is prohibited by institutional workflow rules. Skipped steps are refused.`,
       };
     }
 
     // 3. Enforce Role-Based Authorization
-    if (!matchingRule.allowedRoles.includes(role)) {
+    const roleMatch = matchingRule.allowedRoles.some(
+      (allowed) => normalizeRole(allowed) === role || allowed === rawRole
+    );
+
+    if (!roleMatch) {
       return {
         success: false,
+        httpStatus: 403, // HTTP 403 Forbidden as required by Section 9.3
         code: 'ERR_ROLE_UNAUTHORIZED',
-        reason: `Role '${role}' is not authorized to transition this ticket from '${currentState}' to '${targetState}'. Required role: [${matchingRule.allowedRoles.join(', ')}].`,
+        reason: `Role '${rawRole}' is not authorized to transition this ticket from '${currentState}' to '${targetState}'. Required role: [${matchingRule.allowedRoles.join(', ')}].`,
       };
     }
 
     // 4. Validate prerequisite conditions
-    const validationResult = matchingRule.validate(grievance, payload);
+    const validationResult = matchingRule.validate(ticket, payload);
     if (!validationResult.valid) {
       return {
         success: false,
+        httpStatus: 422, // HTTP 422 Unprocessable Entity
         code: validationResult.code,
         reason: validationResult.message,
       };
@@ -181,10 +268,11 @@ export class WorkflowFSM {
 
     return {
       success: true,
+      httpStatus: 200,
       from: currentState,
       to: targetState,
       actor,
-      role,
+      role: rawRole,
       payload,
     };
   }

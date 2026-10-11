@@ -87,6 +87,7 @@ export class AuditLedger {
     }
 
     return {
+      isValid: true,
       valid: true,
       totalBlocks: this.chain.length,
       verifiedAt: new Date().toISOString(),

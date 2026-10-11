@@ -108,7 +108,7 @@ export class SLAManager {
 
     for (const ticket of grievances) {
       // Completed or rejected tickets do not escalate
-      if ([STATES.RESOLVED, STATES.CITIZEN_CONFIRMED, STATES.REJECTED_INVALID].includes(ticket.status)) {
+      if ([STATES.RESOLVED, STATES.CLOSED, STATES.CITIZEN_CONFIRMED, STATES.READY_FOR_CLOSURE, STATES.REJECTED_INVALID].includes(ticket.status)) {
         continue;
       }
 

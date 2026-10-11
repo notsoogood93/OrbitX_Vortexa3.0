@@ -1,27 +1,26 @@
 /**
  * GovFix Multilingual AI Copilot Sidecar
  * Connects to FreeLLMAPI router (http://localhost:3001/v1) with robust local heuristic fallback.
+ * Tailored for University Service Requests (DY Patil Campus: Maintenance, IT Labs, AV, Facilities)
  * Adheres strictly to hackathon rule: AI informs decisions, never silently overrides them.
  */
 
-const PUNE_WARDS = [
-  'Baner - Balewadi',
-  'Kothrud - Bavdhan',
-  'Hinjawadi - Wakad',
-  'Shivajinagar - Deccan',
-  'Hadapsar - Magarpatta',
-  'Pimpri - Chinchwad Central',
-  'Viman Nagar - Kharadi',
-  'Aundh - University',
+export const UNIVERSITY_CATEGORIES = [
+  'Academic IT & Computing Systems',
+  'Campus Infrastructure & Maintenance',
+  'Electrical & Power Safety',
+  'Network & Connectivity',
+  'Classroom & AV Facilities',
 ];
 
-const CATEGORIES = [
-  'Roads & Potholes',
-  'Water Supply & Contamination',
-  'Drainage & Sewage Leakage',
-  'Streetlights & Electrical Hazards',
-  'Garbage & Solid Waste',
-  'Stray Animals & Public Nuisance',
+export const CAMPUS_ROOMS = [
+  'Lab 304 - Computer Engineering',
+  'Workshop W201 - Mechanical Engineering',
+  'Seminar Hall 2 - Central Campus',
+  'Electrical Lab 102 - High Voltage',
+  'Hostel Block B - Floor 4',
+  'Central Library - 2nd Floor',
+  'Administration Block - Registrar Wing',
 ];
 
 export class AICopilotService {
@@ -31,7 +30,7 @@ export class AICopilotService {
   }
 
   /**
-   * Main entrypoint: analyzes grievance text in Marathi, Hindi, or English
+   * Main entrypoint: analyzes campus or municipal request text
    */
   async analyzeGrievance(rawText, existingTickets = []) {
     let result = null;
@@ -44,20 +43,21 @@ export class AICopilotService {
       result = this.localFallbackAnalysis(rawText);
     }
 
-    // 2. Perform duplicate & proximity cluster check
-    const duplicateCheck = this.detectDuplicatesAndClustering(result, existingTickets);
+    // 2. Perform duplicate & room-level recurrence check
+    const recurrenceCheck = this.detectRecurrenceAndDuplicates(result, existingTickets);
 
-    // 3. Draft official notes
+    // 3. Draft official work order notes
     const drafts = this.generateDraftResponses(result, rawText);
 
     return {
       extracted: result,
-      duplicates: duplicateCheck,
+      duplicates: recurrenceCheck,
+      recurrence: recurrenceCheck,
       drafts,
       meta: {
         isAiRecommendation: true,
         enforcementRule: 'NON_BINDING_SUGGESTION',
-        disclaimer: 'AI predictions are advisory decision support and require human officer confirmation.',
+        disclaimer: 'AI predictions are advisory decision support and require human supervisor confirmation.',
         timestamp: new Date().toISOString(),
       },
     };
@@ -67,18 +67,20 @@ export class AICopilotService {
    * Call FreeLLMAPI router
    */
   async queryRouter(text) {
-    const prompt = `You are a municipal triage expert for Pune Municipal Corporation (PMC/PCMC).
-Analyze this grievance (written in Marathi, Hindi, or English):
+    const prompt = `You are a university facilities and IT service triage expert for Dr. D. Y. Patil Institute of Technology (DY Patil Campus).
+Analyze this campus service request:
 "${text}"
 
 Return ONLY valid JSON with:
 {
-  "category": (One of: "Roads & Potholes", "Water Supply & Contamination", "Drainage & Sewage Leakage", "Streetlights & Electrical Hazards", "Garbage & Solid Waste", "Stray Animals & Public Nuisance"),
+  "category": (One of: "Academic IT & Computing Systems", "Campus Infrastructure & Maintenance", "Electrical & Power Safety", "Network & Connectivity", "Classroom & AV Facilities"),
   "urgency": (One of: "EMERGENCY", "HIGH", "STANDARD", "ROUTINE"),
-  "ward": (One of: "Baner - Balewadi", "Kothrud - Bavdhan", "Hinjawadi - Wakad", "Shivajinagar - Deccan", "Hadapsar - Magarpatta", "Pimpri - Chinchwad Central", "Viman Nagar - Kharadi", "Aundh - University"),
-  "location": "extracted street/area name",
+  "roomId": "extracted room name/number (e.g. Lab 304, Seminar Hall 2, Hostel Block B, Library 2F)",
+  "assetId": "extracted asset (e.g. GPU-WORKSTATION-08, CEILING-PROJECTOR, LATHE-MOTOR-03, WIFI-AP)",
+  "suggestedDepartment": "Computer Engineering / Mechanical Engineering / Campus Estate / Central IT",
+  "suggestedOfficer": "TECH_IT_SUPPORT_03 / TECH_ELECTRICAL_01 / TECH_NETWORKING_02 / TECH_CIVIL_04",
   "summary": "1 sentence concise summary",
-  "detectedLanguage": "Marathi/Hindi/English"
+  "detectedLanguage": "English/Marathi/Hindi"
 }`;
 
     const controller = new AbortController();
@@ -110,96 +112,122 @@ Return ONLY valid JSON with:
   }
 
   /**
-   * Deterministic local fallback (Guarantees zero-failure live demo if API is offline)
+   * Deterministic local fallback (Guarantees 100% offline uptime and zero-failure testing)
    */
   localFallbackAnalysis(text) {
     const lower = text.toLowerCase();
-    let category = 'Roads & Potholes';
+    let category = 'Academic IT & Computing Systems';
     let urgency = 'STANDARD';
-    let ward = 'Baner - Balewadi';
-    let location = 'Pune Local Area';
+    let roomId = 'Lab 304 - Computer Engineering';
+    let assetId = 'DYP-ASSET-GENERIC';
+    let suggestedDepartment = 'Computer Engineering';
+    let suggestedOfficer = 'TECH_IT_SUPPORT_03';
     let detectedLanguage = 'English';
 
     // Language detection
     if (/[\u0900-\u097F]/.test(text)) {
-      if (text.includes('आहे') || text.includes('झाला') || text.includes('खड्डा') || text.includes('पाणी')) {
-        detectedLanguage = 'Marathi';
-      } else {
-        detectedLanguage = 'Hindi';
-      }
+      detectedLanguage = text.includes('आहे') || text.includes('खड्डा') ? 'Marathi' : 'Hindi';
+    }
+
+    // Room detection heuristics
+    if (lower.includes('seminar') || lower.includes('hall 2') || lower.includes('projector')) {
+      roomId = 'Seminar Hall 2 - Central Campus';
+      suggestedDepartment = 'Central Campus Facilities';
+    } else if (lower.includes('mech') || lower.includes('lathe') || lower.includes('workshop')) {
+      roomId = 'Workshop W201 - Mechanical Engineering';
+      suggestedDepartment = 'Mechanical Engineering';
+    } else if (lower.includes('electrical') || lower.includes('voltage') || lower.includes('bench')) {
+      roomId = 'Electrical Lab 102 - High Voltage';
+      suggestedDepartment = 'Electrical Engineering';
+    } else if (lower.includes('hostel') || lower.includes('plumbing') || lower.includes('water')) {
+      roomId = 'Hostel Block B - Floor 4';
+      suggestedDepartment = 'Campus Estate / Facilities';
+    } else if (lower.includes('library') || lower.includes('wifi') || lower.includes('wi-fi')) {
+      roomId = 'Central Library - 2nd Floor';
+      suggestedDepartment = 'Central IT Services';
+    } else if (lower.includes('lab 304') || lower.includes('gpu') || lower.includes('workstation')) {
+      roomId = 'Lab 304 - Computer Engineering';
+      suggestedDepartment = 'Computer Engineering';
     }
 
     // Category & Urgency heuristics
-    if (lower.includes('water') || lower.includes('pipeline') || lower.includes('leak') || text.includes('पाणी') || text.includes('पाईप')) {
-      category = 'Water Supply & Contamination';
+    if (lower.includes('spark') || lower.includes('voltage') || lower.includes('shock') || lower.includes('hazard') || lower.includes('current')) {
+      category = 'Electrical & Power Safety';
+      urgency = 'EMERGENCY';
+      assetId = 'HIGH-VOLTAGE-BENCH-02';
+      suggestedOfficer = 'TECH_ELECTRICAL_01';
+    } else if (lower.includes('wifi') || lower.includes('wi-fi') || lower.includes('internet') || lower.includes('network') || lower.includes('router')) {
+      category = 'Network & Connectivity';
       urgency = 'HIGH';
-    } else if (lower.includes('light') || lower.includes('wire') || lower.includes('current') || text.includes('लाईट') || text.includes('तारा')) {
-      category = 'Streetlights & Electrical Hazards';
-      urgency = lower.includes('wire') || text.includes('तारा') ? 'EMERGENCY' : 'STANDARD';
-    } else if (lower.includes('garbage') || lower.includes('trash') || lower.includes('waste') || text.includes('कचरा')) {
-      category = 'Garbage & Solid Waste';
-      urgency = 'ROUTINE';
-    } else if (lower.includes('gutter') || lower.includes('drain') || lower.includes('sewage') || text.includes('गटार') || text.includes('सांडपाणी')) {
-      category = 'Drainage & Sewage Leakage';
+      assetId = 'CISCO-AP-LIB-204';
+      suggestedOfficer = 'TECH_NETWORKING_02';
+    } else if (lower.includes('projector') || lower.includes('display') || lower.includes('hdmi') || lower.includes('screen') || lower.includes('mic')) {
+      category = 'Classroom & AV Facilities';
+      urgency = 'STANDARD';
+      assetId = 'EPSON-PROJECTOR-SH2';
+      suggestedOfficer = 'TECH_AV_SUPPORT_05';
+    } else if (lower.includes('water') || lower.includes('leak') || lower.includes('pipe') || lower.includes('pump') || lower.includes('flush')) {
+      category = 'Campus Infrastructure & Maintenance';
       urgency = 'HIGH';
-    } else if (lower.includes('pothole') || lower.includes('road') || text.includes('खड्डा') || text.includes('रस्ता')) {
-      category = 'Roads & Potholes';
-      urgency = lower.includes('accident') || text.includes('अपघात') ? 'HIGH' : 'STANDARD';
+      assetId = 'WATER-PUMP-HB4';
+      suggestedOfficer = 'TECH_PLUMBING_03';
+    } else if (lower.includes('gpu') || lower.includes('server') || lower.includes('pc') || lower.includes('workstation') || lower.includes('crash')) {
+      category = 'Academic IT & Computing Systems';
+      urgency = lower.includes('server') || lower.includes('gpu') ? 'HIGH' : 'STANDARD';
+      assetId = 'GPU-RIG-RTX4090-07';
+      suggestedOfficer = 'TECH_IT_SUPPORT_03';
     }
-
-    // Ward heuristics
-    if (lower.includes('kothrud') || text.includes('कोथरूड')) ward = 'Kothrud - Bavdhan';
-    else if (lower.includes('hinjawadi') || lower.includes('wakad') || text.includes('हिंजवडी') || text.includes('वाकड')) ward = 'Hinjawadi - Wakad';
-    else if (lower.includes('hadapsar') || lower.includes('magarpatta') || text.includes('हडपसर')) ward = 'Hadapsar - Magarpatta';
-    else if (lower.includes('shivajinagar') || text.includes('शिवाजीनगर')) ward = 'Shivajinagar - Deccan';
-    else if (lower.includes('pimpri') || lower.includes('chinchwad') || text.includes('पिंपरी')) ward = 'Pimpri - Chinchwad Central';
-    else if (lower.includes('viman') || lower.includes('kharadi') || text.includes('विमाननगर')) ward = 'Viman Nagar - Kharadi';
-    else if (lower.includes('aundh') || text.includes('औंध')) ward = 'Aundh - University';
-    else if (lower.includes('baner') || text.includes('बाणेर')) ward = 'Baner - Balewadi';
 
     return {
       category,
       urgency,
-      ward,
-      location,
+      roomId,
+      assetId,
+      suggestedDepartment,
+      suggestedOfficer,
+      ward: roomId, // backward compatibility with municipal views
+      location: roomId,
       summary: text.slice(0, 80) + '...',
       detectedLanguage,
-      source: 'Deterministic Local Heuristic Fallback',
+      source: 'Deterministic Campus Heuristic Engine',
     };
   }
 
   /**
-   * Detects duplicate / clustered complaints within the same ward & category
+   * Detects duplicate or recurrent issues within the same room / asset
    */
-  detectDuplicatesAndClustering(extracted, existingTickets = []) {
-    const matchingWardTickets = existingTickets.filter(
-      (t) => t.ward === extracted.ward && t.category === extracted.category && t.status !== 'RESOLVED'
+  detectRecurrenceAndDuplicates(extracted, existingTickets = []) {
+    const matchingRoomTickets = existingTickets.filter(
+      (t) => (t.roomId === extracted.roomId || t.ward === extracted.roomId || t.category === extracted.category) &&
+             t.status !== 'CLOSED' && t.status !== 'RESOLVED'
     );
 
-    if (matchingWardTickets.length > 0) {
+    if (matchingRoomTickets.length > 0) {
       return {
         hasPotentialDuplicate: true,
-        matchCount: matchingWardTickets.length,
-        matchedTickets: matchingWardTickets.map((t) => ({ id: t.id, title: t.title, status: t.status })),
-        warning: `Notice: ${matchingWardTickets.length} active issue(s) already reported in ${extracted.ward} for '${extracted.category}'. Avoid duplicate contractor dispatch.`,
+        hasRecurrence: true,
+        matchCount: matchingRoomTickets.length,
+        matchedTickets: matchingRoomTickets.map((t) => ({ id: t.id, title: t.title, status: t.status, roomId: t.roomId })),
+        warning: `Recurrence Alert: ${matchingRoomTickets.length} active request(s) already logged in '${extracted.roomId}' for '${extracted.category}'. Check for chronic equipment failure.`,
       };
     }
 
     return {
       hasPotentialDuplicate: false,
+      hasRecurrence: false,
       matchCount: 0,
       matchedTickets: [],
     };
   }
 
   /**
-   * Generates bilingual drafts for internal work orders and citizen notifications
+   * Generates formal work orders and requester notifications
    */
   generateDraftResponses(extracted, rawText) {
     return {
-      internalWorkOrderNote: `[GovFix AI Work Order Draft]\nWard: ${extracted.ward}\nCategory: ${extracted.category} (${extracted.urgency} Priority)\nSummary: ${extracted.summary}\nAction Required: Immediate on-site inspection and contractor allocation within SLA window.`,
-      citizenMarathiDraft: `नमस्कार, तुमची तक्रार (${extracted.category}) आमच्या प्रणालीमध्ये नोंदवली गेली आहे. वॉर्ड: ${extracted.ward}. आमचे क्षेत्रीय अधिकारी यावर त्वरित कारवाई करत आहेत. धन्यवाद!`,
-      citizenEnglishDraft: `Dear Citizen, your grievance regarding '${extracted.category}' in ${extracted.ward} has been officially recorded. Field inspection scheduled under SLA priority '${extracted.urgency}'.`,
+      internalWorkOrderNote: `[GovFix Campus Work Order]\nLocation: ${extracted.roomId}\nAsset: ${extracted.assetId}\nCategory: ${extracted.category} (${extracted.urgency} Priority)\nDepartment: ${extracted.suggestedDepartment}\nAssigned Tech: ${extracted.suggestedOfficer}\nAction: On-site verification and physical repair required within SLA window.`,
+      citizenEnglishDraft: `Hello Requester, your campus service request for '${extracted.category}' at '${extracted.roomId}' has been officially logged. Assigned to ${extracted.suggestedOfficer} with priority '${extracted.urgency}'.`,
+      citizenMarathiDraft: `नमस्कार, तुमची तक्रार (${extracted.category} - ${extracted.roomId}) प्रणालीमध्ये नोंदवली गेली आहे. संबंधित तंत्रज्ञ लवकरच तपासणी करतील.`,
     };
   }
 }

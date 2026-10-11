@@ -68,9 +68,11 @@ function initFormListeners() {
   const form = document.getElementById('citizenComplaintForm');
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const btn = document.getElementById('btnSubmitGrievance');
-    btn.disabled = true;
-    btn.textContent = '⏳ AI Triaging & Submitting...';
+    const btn = document.getElementById('btnSubmitComplaint') || document.getElementById('btnSubmitGrievance');
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = '⏳ AI Triaging & Submitting...';
+    }
 
     const payload = {
       citizenName: document.getElementById('citizenName').value,
@@ -609,12 +611,55 @@ window.govFix = {
     });
   },
 
+  fillSample: (type) => {
+    const samples = {
+      gpu: {
+        name: 'Prof. Aniket Kulkarni',
+        contact: 'aniket.kulkarni@dypit.edu.in',
+        location: 'Lab 304 - Computer Engineering',
+        desc: 'Workstation RIG-07 in Computer Lab 304 shut down abruptly with burnt smell from SMPS unit during project lab.',
+      },
+      hazard: {
+        name: 'Dr. Sneha Joshi (HOD Electrical)',
+        contact: 'sneha.joshi@dypit.edu.in',
+        location: 'Electrical Lab 102 - High Voltage',
+        desc: 'Main breaker on 3-phase experimental test bench is sparking on load. Immediate isolation required to prevent laboratory fire.',
+      },
+      av: {
+        name: 'Rohan Patil (Student Council)',
+        contact: 'rohan.patil@student.dypit.edu.in',
+        location: 'Seminar Hall 2 - Central Campus',
+        desc: 'Ceiling projector displays pink screen and disconnects intermittent during technical presentation.',
+      },
+      plumbing: {
+        name: 'Sanjay Shinde (Hostel Rector)',
+        contact: 'sanjay.shinde@dypit.edu.in',
+        location: 'Hostel Block B - Floor 4',
+        desc: 'Fourth-floor bathrooms have zero water pressure since yesterday night. Booster pump not starting.',
+      },
+    };
+
+    const s = samples[type] || samples.gpu;
+    const nameEl = document.getElementById('citizenName');
+    const contactEl = document.getElementById('citizenContact');
+    const locEl = document.getElementById('citizenLocation');
+    const descEl = document.getElementById('citizenDescription');
+
+    if (nameEl) nameEl.value = s.name;
+    if (contactEl) contactEl.value = s.contact;
+    if (locEl) locEl.value = s.location;
+    if (descEl) descEl.value = s.desc;
+
+    showToast(`📝 Loaded sample request: ${s.location}`);
+  },
+
   advanceTime,
   resetTime,
 };
 
 function showToast(message, isError = false) {
   const toast = document.getElementById('toastNotification');
+  if (!toast) return;
   toast.textContent = message;
   toast.style.borderColor = isError ? '#ef4444' : '#10b981';
   toast.classList.remove('hidden');
@@ -623,3 +668,4 @@ function showToast(message, isError = false) {
     toast.classList.add('hidden');
   }, 4000);
 }
+

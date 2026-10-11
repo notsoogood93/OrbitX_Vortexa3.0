@@ -4,7 +4,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 import { AuditLedger } from './src/engine/auditLedger.js';
-import { WorkflowFSM, STATES, ROLES } from './src/engine/fsm.js';
+import { WorkflowFSM, STATES, ROLES, normalizeRole } from './src/engine/fsm.js';
 import { SLAManager } from './src/engine/sla.js';
 import { AICopilotService } from './src/services/aiCopilot.js';
 import { SEED_GRIEVANCES } from './src/data/seedData.js';
@@ -33,18 +33,19 @@ let grievances = SEED_GRIEVANCES.map((item) => {
   };
 });
 
-// Seed initial audit events for sample records
+// Seed initial audit events
 grievances.forEach((g) => {
   auditLedger.logEvent({
     eventType: 'TICKET_SEEDED',
-    actor: 'MUNICIPAL_SYSTEM',
+    actor: 'CAMPUS_ERP_GATEWAY',
     role: ROLES.SYSTEM_DAEMON,
     grievanceId: g.id,
     details: {
       initialStatus: g.status,
       category: g.category,
       urgency: g.urgency,
-      ward: g.ward,
+      roomId: g.roomId || g.ward,
+      assetId: g.assetId,
     },
   });
 });
@@ -59,11 +60,10 @@ setInterval(() => {
 // ==============================================================================
 
 /**
- * GET /api/grievances
- * List all tickets enriched with current dynamic SLA calculations
+ * GET /api/grievances or GET /api/requests
+ * List all campus requests enriched with dynamic SLA calculations
  */
-app.get('/api/grievances', (req, res) => {
-  // Re-evaluate any pending escalations before returning
+const handleGetRequests = (req, res) => {
   slaManager.evaluateAndApplyEscalations(grievances, auditLedger);
 
   const enriched = grievances.map((ticket) => {
@@ -75,21 +75,27 @@ app.get('/api/grievances', (req, res) => {
   });
 
   res.json({
+    institution: 'Dr. D. Y. Patil Institute of Technology (DY Patil Campus)',
+    track: 'University Service Requests (Maintenance, IT Support & Campus Facilities)',
     currentTime: slaManager.getCurrentTime().toISOString(),
     virtualOffsetHours: (slaManager.virtualTimeOffsetMs / (3600 * 1000)).toFixed(1),
     totalTickets: enriched.length,
     grievances: enriched,
+    requests: enriched,
   });
-});
+};
+
+app.get('/api/grievances', handleGetRequests);
+app.get('/api/requests', handleGetRequests);
 
 /**
- * GET /api/grievances/:id
+ * GET /api/grievances/:id or GET /api/requests/:id
  * Retrieve specific ticket and its cryptographic audit trail
  */
-app.get('/api/grievances/:id', (req, res) => {
+const handleGetRequestById = (req, res) => {
   const ticket = grievances.find((g) => g.id === req.params.id);
   if (!ticket) {
-    return res.status(404).json({ error: 'Grievance not found' });
+    return res.status(404).json({ error: 'Request not found' });
   }
 
   const slaMetrics = slaManager.getTicketSLAStatus(ticket);
@@ -99,27 +105,31 @@ app.get('/api/grievances/:id', (req, res) => {
     ticket: { ...ticket, slaMetrics },
     auditHistory,
   });
-});
+};
+
+app.get('/api/grievances/:id', handleGetRequestById);
+app.get('/api/requests/:id', handleGetRequestById);
 
 /**
- * POST /api/grievances
- * Citizen submits new grievance. Automatically calls AI Copilot.
+ * POST /api/grievances or POST /api/requests
+ * Submit new service request with AI Copilot extraction
  */
-app.post('/api/grievances', async (req, res) => {
-  const { title, description, citizenName, citizenContact, location } = req.body;
+const handleCreateRequest = async (req, res) => {
+  const { title, description, citizenName, requesterName, citizenContact, requesterContact, location, roomId, assetId } = req.body;
 
   if (!description || description.trim().length < 5) {
-    return res.status(400).json({ error: 'Description is required (minimum 5 characters).' });
+    return res.status(422).json({ error: 'Description is required (minimum 5 characters).' });
   }
 
-  const newId = `PUN-2026-${String(grievances.length + 86).padStart(3, '0')}`;
+  const newId = `DYP-2026-${String(grievances.length + 106).padStart(3, '0')}`;
   const now = slaManager.getCurrentTime();
 
-  // 1. Run AI Copilot Analysis (Marathi/Hindi/English extraction + duplicate check)
+  // 1. Run AI Copilot Analysis
   const aiAnalysis = await aiCopilot.analyzeGrievance(description, grievances);
   const urgency = aiAnalysis.extracted.urgency || 'STANDARD';
-  const category = aiAnalysis.extracted.category || 'Roads & Potholes';
-  const ward = aiAnalysis.extracted.ward || 'Baner - Balewadi';
+  const category = aiAnalysis.extracted.category || 'Academic IT & Computing Systems';
+  const detectedRoom = roomId || aiAnalysis.extracted.roomId || location || 'Central Campus';
+  const detectedAsset = assetId || aiAnalysis.extracted.assetId || 'DYP-ASSET-01';
 
   // 2. Compute dynamic SLA deadlines
   const sla = slaManager.calculateDeadlines(now.toISOString(), urgency);
@@ -128,14 +138,17 @@ app.post('/api/grievances', async (req, res) => {
     id: newId,
     title: title || aiAnalysis.extracted.summary || description.slice(0, 50),
     description,
-    citizenName: citizenName || 'Anonymous Citizen',
-    citizenContact: citizenContact || 'N/A',
-    location: location || aiAnalysis.extracted.location || 'Pune',
+    citizenName: requesterName || citizenName || 'Anonymous Student / Faculty',
+    citizenContact: requesterContact || citizenContact || 'campus.user@dypit.edu.in',
+    location: detectedRoom,
+    roomId: detectedRoom,
+    assetId: detectedAsset,
     category,
     urgency,
-    ward,
+    ward: detectedRoom,
     status: STATES.SUBMITTED,
     assignedEngineerId: null,
+    assignedOfficerId: null,
     createdAt: now.toISOString(),
     updatedAt: now.toISOString(),
     aiRecommendation: aiAnalysis.extracted,
@@ -148,35 +161,38 @@ app.post('/api/grievances', async (req, res) => {
 
   // 3. Log into Cryptographic Audit Ledger
   auditLedger.logEvent({
-    eventType: 'GRIEVANCE_SUBMITTED',
+    eventType: 'REQUEST_SUBMITTED',
     actor: newTicket.citizenName,
-    role: ROLES.CITIZEN,
+    role: ROLES.REQUESTER,
     grievanceId: newTicket.id,
     details: {
       category: newTicket.category,
       urgency: newTicket.urgency,
-      ward: newTicket.ward,
+      roomId: newTicket.roomId,
+      assetId: newTicket.assetId,
       aiTriageSummary: aiAnalysis.extracted.summary,
     },
   });
 
   res.status(201).json({
     success: true,
-    message: 'Grievance submitted and cryptographically recorded.',
+    message: 'Campus service request submitted and cryptographically recorded.',
     ticket: newTicket,
+    request: newTicket,
   });
-});
+};
+
+app.post('/api/grievances', handleCreateRequest);
+app.post('/api/requests', handleCreateRequest);
 
 /**
- * POST /api/grievances/:id/transition
- * Attempts a state transition enforced by FSM and Role Guard.
+ * Transition Core Handler
  */
-app.post('/api/grievances/:id/transition', (req, res) => {
-  const { targetState, actor, role, payload } = req.body;
+function processTransition(req, res, targetState, actor, role, payload = {}) {
   const ticket = grievances.find((g) => g.id === req.params.id);
 
   if (!ticket) {
-    return res.status(404).json({ error: 'Grievance not found' });
+    return res.status(404).json({ error: 'Request record not found' });
   }
 
   // Enforce FSM transition rules
@@ -186,8 +202,8 @@ app.post('/api/grievances/:id/transition', (req, res) => {
     // REFUSAL RULE: Refused attempts must be visibly logged on the audit ledger
     const refusalAudit = auditLedger.logEvent({
       eventType: 'TRANSITION_REFUSED',
-      actor,
-      role,
+      actor: actor || 'UNKNOWN',
+      role: role || 'UNKNOWN',
       grievanceId: ticket.id,
       isRefusal: true,
       details: {
@@ -198,7 +214,7 @@ app.post('/api/grievances/:id/transition', (req, res) => {
       },
     });
 
-    return res.status(400).json({
+    return res.status(result.httpStatus || 409).json({
       success: false,
       refused: true,
       code: result.code,
@@ -212,17 +228,23 @@ app.post('/api/grievances/:id/transition', (req, res) => {
   ticket.status = targetState;
   ticket.updatedAt = slaManager.getCurrentTime().toISOString();
 
-  if (payload?.assignedEngineerId) ticket.assignedEngineerId = payload.assignedEngineerId;
+  if (payload?.assignedEngineerId) {
+    ticket.assignedEngineerId = payload.assignedEngineerId;
+    ticket.assignedOfficerId = payload.assignedEngineerId;
+  }
+  if (payload?.assignedOfficerId) {
+    ticket.assignedEngineerId = payload.assignedOfficerId;
+    ticket.assignedOfficerId = payload.assignedOfficerId;
+  }
   if (payload?.workNotes) ticket.workNotes = payload.workNotes;
   if (payload?.inspectionNotes) ticket.inspectionNotes = payload.inspectionNotes;
   if (payload?.category) ticket.category = payload.category;
-  if (payload?.ward) ticket.ward = payload.ward;
   if (payload?.urgency) {
     ticket.urgency = payload.urgency;
     ticket.sla = slaManager.calculateDeadlines(ticket.createdAt, payload.urgency);
   }
 
-  // Record accepted transition
+  // Record accepted transition in SHA-256 Ledger
   const acceptedAudit = auditLedger.logEvent({
     eventType: 'STATE_TRANSITION_ACCEPTED',
     actor,
@@ -235,11 +257,100 @@ app.post('/api/grievances/:id/transition', (req, res) => {
     },
   });
 
-  res.json({
+  return res.json({
     success: true,
     ticket,
     auditHash: acceptedAudit.hash,
   });
+}
+
+/**
+ * POST /api/grievances/:id/transition or PATCH /api/requests/:id/status
+ */
+app.post('/api/grievances/:id/transition', (req, res) => {
+  const { targetState, actor, role, payload } = req.body;
+  processTransition(req, res, targetState, actor, role, payload);
+});
+
+app.patch('/api/requests/:id/status', (req, res) => {
+  const { targetState, actor, role, payload } = req.body;
+  processTransition(req, res, targetState, actor, role, payload);
+});
+
+/**
+ * Specific Table 5 API Endpoints (Section 9.2 in PDF)
+ */
+// 1. Assign Officer / Technician
+app.post('/api/requests/:id/assign', (req, res) => {
+  const { officerId, actor, role } = req.body;
+  processTransition(req, res, STATES.ASSIGNED, actor || 'SUPERVISOR', role || ROLES.SUPERVISOR, {
+    assignedOfficerId: officerId,
+    assignedEngineerId: officerId,
+  });
+});
+
+// 2. Officer Accept or Reject Assignment Decision
+app.post('/api/assignments/:id/decision', (req, res) => {
+  const { decision, reason, actor } = req.body; // decision: 'ACCEPT' or 'REJECT'
+  const targetState = decision === 'ACCEPT' ? STATES.ACCEPTED : STATES.TRIAGED;
+  processTransition(req, res, targetState, actor || 'OFFICER', ROLES.OFFICER, {
+    rejectionReason: reason,
+  });
+});
+
+// 3. Propose Closure
+app.post('/api/requests/:id/closure-proposal', (req, res) => {
+  const { workNotes, evidence, actor } = req.body;
+  processTransition(req, res, STATES.READY_FOR_CLOSURE, actor || 'OFFICER', ROLES.OFFICER, {
+    workNotes: workNotes || evidence,
+  });
+});
+
+// 4. Closure Decision (Approve / Reject)
+app.post('/api/closures/:id/decision', (req, res) => {
+  const { approved, rating, actor, role } = req.body;
+  const targetState = approved ? STATES.CLOSED : STATES.IN_PROGRESS;
+  processTransition(req, res, targetState, actor || 'SUPERVISOR', role || ROLES.SUPERVISOR, {
+    rating,
+  });
+});
+
+// 5. Reopen Request
+app.post('/api/requests/:id/reopen', (req, res) => {
+  const { reason, actor } = req.body;
+  processTransition(req, res, STATES.REOPENED, actor || 'REQUESTER', ROLES.REQUESTER, {
+    reopenReason: reason,
+  });
+});
+
+// 6. Oversight Overdue Dashboard
+app.get('/api/oversight/overdue', (req, res) => {
+  const overdue = grievances.filter((t) => {
+    const sla = slaManager.getTicketSLAStatus(t);
+    return sla.isOverdue || t.status === STATES.ESCALATED_L1 || t.status === STATES.ESCALATED_L2;
+  });
+  res.json({ totalOverdue: overdue.length, overdue });
+});
+
+// 7. Oversight Recurrences Dashboard
+app.get('/api/oversight/recurrences', (req, res) => {
+  const roomCounts = {};
+  grievances.forEach((t) => {
+    const r = t.roomId || t.ward;
+    roomCounts[r] = (roomCounts[r] || 0) + 1;
+  });
+  const candidates = Object.entries(roomCounts)
+    .filter(([_, count]) => count > 1)
+    .map(([roomId, count]) => ({ roomId, count }));
+
+  res.json({ candidates });
+});
+
+// 8. AI Suggest (Non-authoritative sidecar)
+app.post('/api/ai/suggest', async (req, res) => {
+  const { text } = req.body;
+  const analysis = await aiCopilot.analyzeGrievance(text || '', grievances);
+  res.json(analysis);
 });
 
 /**
@@ -268,7 +379,7 @@ app.post('/api/simulation/time-travel', (req, res) => {
 
 /**
  * GET /api/audit
- * Returns full audit chain and verifies mathematical hash integrity
+ * Returns full audit chain and verifies mathematical SHA-256 hash integrity
  */
 app.get('/api/audit', (req, res) => {
   const verification = auditLedger.verifyIntegrity();
@@ -283,7 +394,8 @@ app.get('/api/audit', (req, res) => {
 app.listen(PORT, () => {
   console.log(`=============================================================`);
   console.log(`🏛️ GovFix Server Running at: http://localhost:${PORT}`);
-  console.log(`   - FSM Engine: Active (Strict Role & Refusal Guards)`);
+  console.log(`   - Track: University Service Requests (DY Patil Campus)`);
+  console.log(`   - FSM Engine: Active (Strict HTTP 409/403/422 Refusal Guards)`);
   console.log(`   - SLA Engine: Active (Virtual Time-Travel Support)`);
   console.log(`   - Audit Ledger: Cryptographically Chained (SHA-256)`);
   console.log(`   - AI Copilot: Connected to ${aiCopilot.routerBaseUrl}`);
