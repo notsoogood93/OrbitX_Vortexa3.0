@@ -2,13 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>GovFix — Problem Understanding, Solution Proposal & Architecture Report | Team OrbitX</title>
+  <title>GovFix — University Service Requests | Problem Understanding, Solution Proposal & Architecture Report</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
     @page {
       size: A4;
-      margin: 18mm 16mm 18mm 16mm;
+      margin: 16mm 15mm 16mm 15mm;
     }
 
     * {
@@ -19,8 +19,8 @@
 
     body {
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-      font-size: 10.5pt;
-      line-height: 1.55;
+      font-size: 10pt;
+      line-height: 1.5;
       color: #1e293b;
       background: #ffffff;
     }
@@ -28,14 +28,13 @@
     .report-container {
       max-width: 820px;
       margin: 0 auto;
-      padding: 10px 0;
+      padding: 5px 0;
     }
 
-    /* Header banner */
     .header-banner {
-      border-bottom: 2px solid #0284c7;
-      padding-bottom: 16px;
-      margin-bottom: 22px;
+      border-bottom: 2.5px solid #2563eb;
+      padding-bottom: 12px;
+      margin-bottom: 18px;
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
@@ -43,7 +42,7 @@
 
     .banner-title {
       font-family: 'Outfit', sans-serif;
-      font-size: 22pt;
+      font-size: 20pt;
       font-weight: 800;
       color: #0f172a;
       letter-spacing: -0.5px;
@@ -51,17 +50,17 @@
     }
 
     .banner-subtitle {
-      font-size: 11pt;
+      font-size: 10.5pt;
       font-weight: 600;
-      color: #0284c7;
-      margin-top: 4px;
+      color: #2563eb;
+      margin-top: 3px;
     }
 
     .meta-box {
       text-align: right;
-      font-size: 8.5pt;
+      font-size: 8pt;
       color: #64748b;
-      line-height: 1.4;
+      line-height: 1.35;
       background: #f8fafc;
       padding: 8px 12px;
       border-radius: 6px;
@@ -74,75 +73,68 @@
 
     h2 {
       font-family: 'Outfit', sans-serif;
-      font-size: 14pt;
+      font-size: 13pt;
       font-weight: 700;
       color: #0f172a;
-      margin-top: 22px;
-      margin-bottom: 10px;
+      margin-top: 18px;
+      margin-bottom: 8px;
       padding-bottom: 4px;
       border-bottom: 1px solid #e2e8f0;
-      display: flex;
-      align-items: center;
-      gap: 8px;
     }
 
     h3 {
       font-family: 'Outfit', sans-serif;
-      font-size: 11.5pt;
+      font-size: 10.5pt;
       font-weight: 600;
       color: #1e293b;
-      margin-top: 14px;
-      margin-bottom: 6px;
+      margin-top: 12px;
+      margin-bottom: 5px;
     }
 
     p {
-      margin-bottom: 10px;
+      margin-bottom: 8px;
       color: #334155;
     }
 
     ul, ol {
-      margin-left: 20px;
-      margin-bottom: 12px;
+      margin-left: 18px;
+      margin-bottom: 10px;
       color: #334155;
     }
 
     li {
-      margin-bottom: 4px;
+      margin-bottom: 3px;
     }
 
     .highlight-quote {
-      background: #f0f9ff;
-      border-left: 4px solid #0284c7;
-      padding: 10px 14px;
-      font-size: 10pt;
+      background: #eff6ff;
+      border-left: 4px solid #2563eb;
+      padding: 8px 12px;
+      font-size: 9.5pt;
       font-weight: 600;
-      color: #0369a1;
-      border-radius: 0 6px 6px 0;
-      margin: 12px 0;
+      color: #1d4ed8;
+      border-radius: 0 5px 5px 0;
+      margin: 10px 0;
     }
 
-    /* Badges */
     .badge {
       display: inline-block;
-      font-size: 7.5pt;
+      font-size: 7pt;
       font-weight: 700;
-      padding: 2px 7px;
+      padding: 2px 6px;
       border-radius: 4px;
       text-transform: uppercase;
       letter-spacing: 0.5px;
     }
 
-    .badge-blue { background: #e0f2fe; color: #0369a1; }
-    .badge-red { background: #fee2e2; color: #b91c1c; }
     .badge-green { background: #dcfce7; color: #15803d; }
-    .badge-amber { background: #fef3c7; color: #b45309; }
+    .badge-blue { background: #dbeafe; color: #1e40af; }
 
-    /* Tables */
     table {
       width: 100%;
       border-collapse: collapse;
-      margin: 12px 0;
-      font-size: 8.5pt;
+      margin: 10px 0;
+      font-size: 8pt;
     }
 
     th {
@@ -150,12 +142,12 @@
       color: #0f172a;
       font-weight: 700;
       text-align: left;
-      padding: 7px 10px;
+      padding: 6px 8px;
       border: 1px solid #cbd5e1;
     }
 
     td {
-      padding: 7px 10px;
+      padding: 6px 8px;
       border: 1px solid #cbd5e1;
       color: #334155;
       vertical-align: top;
@@ -167,7 +159,7 @@
 
     code {
       font-family: 'JetBrains Mono', monospace;
-      font-size: 8pt;
+      font-size: 7.5pt;
       background: #f1f5f9;
       padding: 2px 4px;
       border-radius: 3px;
@@ -175,21 +167,20 @@
       border: 1px solid #e2e8f0;
     }
 
-    /* Diagram containers */
     .diagram-card {
       background: #fafafa;
       border: 1px solid #e2e8f0;
-      border-radius: 8px;
-      padding: 14px;
-      margin: 14px 0;
+      border-radius: 6px;
+      padding: 10px;
+      margin: 12px 0;
       text-align: center;
     }
 
     .diagram-caption {
-      font-size: 8.5pt;
+      font-size: 8pt;
       font-weight: 600;
       color: #64748b;
-      margin-top: 8px;
+      margin-top: 6px;
     }
 
     .page-break {
@@ -200,26 +191,26 @@
     .grid-2 {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 12px;
-      margin: 10px 0;
+      gap: 10px;
+      margin: 8px 0;
     }
 
     .card {
       background: #f8fafc;
       border: 1px solid #e2e8f0;
-      border-radius: 6px;
-      padding: 10px 12px;
+      border-radius: 5px;
+      padding: 8px 10px;
     }
 
     .card h4 {
-      font-size: 9.5pt;
+      font-size: 9pt;
       font-weight: 700;
       color: #0f172a;
-      margin-bottom: 4px;
+      margin-bottom: 3px;
     }
 
     .card p {
-      font-size: 8.5pt;
+      font-size: 8pt;
       margin: 0;
       color: #475569;
     }
@@ -229,66 +220,73 @@
 
   <div class="report-container">
 
-    <!-- PAGE 1: HEADER & PROBLEM UNDERSTANDING -->
+    <!-- HEADER BANNER -->
     <header class="header-banner">
       <div>
-        <div class="banner-title">🏛️ GovFix Engine</div>
+        <div class="banner-title">🏛️ GovFix: Campus Workflow Engine</div>
         <div class="banner-subtitle">Problem Understanding, Solution Proposal & System Architecture Report</div>
       </div>
       <div class="meta-box">
         <div><strong>VORTEXA 3.0 Hackathon</strong></div>
         <div>Domain 7: Government Systems & GovTech</div>
-        <div>Problem Statement: <strong>G-02 GovFix</strong></div>
+        <div>Selected Track: <strong>University Service Requests</strong></div>
         <div>Team: <strong>OrbitX</strong> | Oct 11, 2026</div>
       </div>
     </header>
 
     <h2>1. Problem Understanding</h2>
     <p>
-      Public institutions—such as the <strong>Pimpri Chinchwad Municipal Corporation (PCMC)</strong>, <strong>Pune Municipal Corporation (PMC)</strong>, and large higher education campuses—face enormous volumes of citizen complaints and service requests (15,000+ monthly in Pune). These range from emergency infrastructure hazards (burst water mains, electrical cable exposures, road cave-ins) to routine maintenance.
+      Higher education campuses—such as <strong>Dr. D. Y. Patil Institute of Technology, Pimpri</strong>—operate as dense micro-cities housing thousands of students, researchers, faculty, and administrative staff. Every semester generates thousands of critical service requests across:
     </p>
+    <ul>
+      <li><strong>Campus Facilities & Infrastructure</strong>: Laboratory electrical failures, classroom smart-board/projector breakdowns, hostel plumbing and water maintenance.</li>
+      <li><strong>Academic IT & Computing Services</strong>: Department Wi-Fi access point downtime, computing lab server faults, student portal credential blocks.</li>
+      <li><strong>Administrative & Equipment Requests</strong>: Classroom reallocation, asset relocations, and laboratory equipment calibration clearances.</li>
+    </ul>
+
     <p>
-      Despite public intake portals (PCMC Sarathi, PMC Care, Samarth eGov), real-world grievance resolution breaks down due to <strong>five structural failure modes</strong>:
+      Despite campus ERP portals (e.g., Samarth eGov, Google Forms, or basic email ticketing), request lifecycles systematically collapse due to <strong>five structural failure modes</strong>:
     </p>
 
     <div class="grid-2">
       <div class="card">
         <h4>1. The "Limbo" Problem</h4>
-        <p>Grievances enter "In Progress" and stall indefinitely with zero automated penalty, accountability, or progression forcing.</p>
+        <p>Tickets enter "In Progress" and sit for weeks with zero progression forcing or technician accountability.</p>
       </div>
       <div class="card">
-        <h4>2. Ghost Resolutions</h4>
-        <p>Contractors mark complaints "Resolved" without on-site photo evidence, physical inspection sign-offs, or citizen verification.</p>
+        <h4>2. Premature & Ghost Closures</h4>
+        <p>Technicians mark tasks "Closed" without physical repair photos, supervisor sign-offs, or student confirmation.</p>
       </div>
       <div class="card">
         <h4>3. Silent SLA Breaches</h4>
-        <p>Deadlines expire without notifying supervisors or municipal commissioners because standard databases lack proactive escalation daemons.</p>
+        <p>Deadlines pass unnoticed because campus databases lack background daemons to notify Estate Managers or HODs.</p>
       </div>
       <div class="card">
         <h4>4. The Flaky AI Trap</h4>
-        <p>Unconstrained LLM chatbots hallucinate state transitions, approve unauthorized closures, or drop records when given mutation rights.</p>
+        <p>Unconstrained LLM chatbots hallucinate status jumps, approve unauthorized closures, or drop records when given mutation rights.</p>
       </div>
     </div>
 
     <div class="highlight-quote">
-      Critical Failure: Standard databases (SQLite/MySQL) have mutable rows. If an officer delays a water contamination case, traditional logs cannot cryptographically prove when deadlines were missed or if records were tampered with.
+      Critical Failure: Relational database rows in university ERPs are mutable. If a high-voltage lab hazard or server failure is neglected, standard databases cannot cryptographically prove when deadlines were missed or if logs were retroactively edited.
     </div>
 
-    <h2>2. Proposed Solution: GovFix</h2>
+    <h2>2. Proposed Solution: GovFix (University Track)</h2>
     <p>
-      <strong>GovFix</strong> is an institutional-grade, backend-enforced, finite-state workflow engine designed with one immutable governing rule:
+      <strong>GovFix</strong> is an institutional-grade, backend-enforced finite-state workflow engine purpose-built for university campus maintenance and IT service operations, governed by one ironclad rule:
     </p>
     <div class="highlight-quote">
-      "Deterministic Rules Govern Authority, State & Deadlines; AI Informs But Never Silently Overrides."
+      "Deterministic Rules Govern Authority, State Transitions & Deadlines; AI Informs But Never Overrides."
     </div>
 
-    <p>GovFix replaces ad-hoc ticketing with four tightly integrated subsystems:</p>
+    <p>GovFix replaces ad-hoc ticketing with five tightly engineered subsystems:</p>
     <ul>
-      <li><strong>Deterministic 11-State Finite State Machine (FSM)</strong>: Formally defines all legal paths. Illegal jumps (e.g. <code>SUBMITTED &rarr; RESOLVED</code>) are refused with machine-readable codes (<code>ERR_ILLEGAL_STATE_JUMP</code>) and <code>HTTP 409 Conflict</code>.</li>
-      <li><strong>Backend-Enforced Role RBAC</strong>: Every state mutation requires verified authority (<code>CITIZEN</code>, <code>WARD_OFFICER</code>, <code>FIELD_ENGINEER</code>, <code>SUPERVISING_COMMISSIONER</code>, <code>SYSTEM_DAEMON</code>). Unauthorized attempts return <code>HTTP 403 Forbidden</code>.</li>
-      <li><strong>Dynamic Multi-Tier SLA Escalation Engine</strong>: Automatically assigns deadlines based on urgency (12h for Hazards, 24h for High, 48h for Standard, 72h for Routine). When deadlines breach, background daemons escalate to Tier-1 (Ward Officer) and Tier-2 (Municipal Commissioner).</li>
-      <li><strong>Tamper-Evident SHA-256 Cryptographic Audit Ledger</strong>: Every state change, escalation, and <em>refused attempt</em> is chained into an immutable SHA-256 block sequence, proving 100% mathematical integrity.</li>
-      <li><strong>Virtual Time-Travel Simulation</strong>: Interactive controls (<code>+12h</code>, <code>+24h</code>, <code>+48h</code>) allow evaluators to test multi-day escalation workflows in seconds.</li>
+      <li><strong>Deterministic Finite State Machine (FSM)</strong>: Formally defines the exact lifecycle: <code>Draft &rarr; Submitted &rarr; Triaged &rarr; Assigned &rarr; Accepted &rarr; In Progress &rarr; Ready for Closure / Escalated &rarr; Closed or Reopened</code>. Illegal moves (e.g. <code>Submitted &rarr; Closed</code>) return <code>HTTP 409 Conflict</code> (<code>ERR_ILLEGAL_STATE_JUMP</code>).</li>
+      <li><strong>Backend-Enforced Role RBAC</strong>: Separates duties across Requesters, Department Supervisors, and Technicians. Unauthorized attempts return <code>HTTP 403 Forbidden</code> (<code>ERR_ROLE_UNAUTHORIZED</code>) and are recorded in the audit trail.</li>
+      <li><strong>Campus SLA & Multi-Tier Auto-Escalation Daemon</strong>: Assigns deadlines by urgency (Lab Hazard: 12h, IT Server Down: 24h, Routine Maintenance: 48h). Background daemons auto-escalate overdue tickets to Tier-1 (Department Supervisor) and Tier-2 (Estate Officer/Registrar).</li>
+      <li><strong>Duplicate Escalation Prevention</strong>: Suppresses redundant escalation events for the same request across evaluation cycles.</li>
+      <li><strong>Tamper-Evident SHA-256 Cryptographic Audit Ledger</strong>: Surpassing basic SQLite, every accepted state transition, refused unauthorized move, and escalation event is cryptographically hashed and chained into an immutable ledger with 1-click mathematical verification.</li>
+      <li><strong>Virtual Time-Travel Simulation</strong>: Built-in fast-forward controls (<code>+12h</code>, <code>+24h</code>, <code>+48h</code>) allow judges to witness live automated escalations in seconds.</li>
     </ul>
 
     <!-- PAGE BREAK -->
@@ -296,78 +294,78 @@
 
     <h2>3. Intended Users & Role Boundaries</h2>
     <p>
-      GovFix enforces strict, backend-guarded boundaries across five institutional actors:
+      GovFix enforces strict, backend-guarded boundaries across five campus user roles:
     </p>
 
     <table>
       <thead>
         <tr>
-          <th style="width: 18%;">User Role</th>
-          <th style="width: 42%;">Permitted Actions</th>
+          <th style="width: 20%;">User Role</th>
+          <th style="width: 40%;">Permitted Actions</th>
           <th style="width: 40%;">Prohibited Actions (Strictly Refused)</th>
         </tr>
       </thead>
       <tbody>
         <tr>
-          <td><strong>Citizen / Requester</strong></td>
-          <td>• Submit grievance (Marathi/Hindi/English)<br>• Track live status & SLA countdown<br>• Confirm resolution with satisfaction score<br>• Reopen within 48h if unsatisfied</td>
-          <td>• Cannot triage or assign officers<br>• Cannot unilaterally mark tickets Resolved<br>• Cannot alter SLA deadlines</td>
+          <td><strong>Requester (Student / Faculty)</strong></td>
+          <td>• Create request with Room & Asset ID<br>• View own requests & live SLA countdown<br>• Confirm closure with satisfaction score (1-5)<br>• Reopen within 48h if issue persists</td>
+          <td>• Cannot assign technicians or officers<br>• Cannot force-close tickets<br>• Cannot alter SLA deadlines</td>
         </tr>
         <tr>
-          <td><strong>Ward Officer / Supervisor</strong></td>
-          <td>• Review side-by-side AI triage recommendations<br>• Override category, ward, or priority<br>• Reject invalid spam with logged justification<br>• Dispatch work orders to Field Engineers<br>• Conduct physical inspection sign-offs</td>
-          <td>• Cannot skip engineering repair stage<br>• Cannot resolve complaints without inspection<br>• Cannot delete audit records</td>
+          <td><strong>Supervisor (HOD / Estate Officer)</strong></td>
+          <td>• Review AI triage recommendations<br>• Verify category, room, priority<br>• Dispatch work orders to Technicians<br>• Approve or reject closure proposals</td>
+          <td>• Cannot skip engineering repair stage<br>• Cannot close tickets without evidence<br>• Cannot erase historical audit records</td>
         </tr>
         <tr>
-          <td><strong>Field Engineer / Staff</strong></td>
-          <td>• Acknowledge assigned work orders<br>• Transition ticket to <code>IN_PROGRESS</code><br>• Upload photographic evidence & completion notes<br>• Request <code>INSPECTION_PENDING</code></td>
-          <td>• Cannot approve own work as final <code>RESOLVED</code><br>• Cannot reassign tickets to other staff<br>• Cannot modify SLA timers</td>
+          <td><strong>Officer (Maintenance / IT Tech)</strong></td>
+          <td>• Accept or reject assigned work order<br>• Transition ticket to <code>In Progress</code><br>• Upload work completion notes & photo proof<br>• Submit <code>Ready for Closure</code> proposal</td>
+          <td>• Cannot approve own work as final closed<br>• Cannot reassign tickets to others<br>• Cannot alter SLA timers</td>
         </tr>
         <tr>
-          <td><strong>Supervising Commissioner</strong></td>
-          <td>• City-wide SLA compliance oversight<br>• Review active Tier-1 and Tier-2 escalations<br>• Issue direct administrative orders on overdue cases<br>• Reallocate emergency ward resources</td>
-          <td>• Cannot bypass deterministic state flow<br>• Cannot erase audit ledger entries</td>
+          <td><strong>Campus Administrator (Registrar)</strong></td>
+          <td>• Campus-wide SLA compliance oversight<br>• Review Tier-1 / Tier-2 escalation rosters<br>• Direct intervention on overdue campus hazards</td>
+          <td>• Cannot bypass state machine guards<br>• Cannot modify cryptographic ledger blocks</td>
         </tr>
         <tr>
           <td><strong>System SLA Daemon</strong></td>
-          <td>• Continuous background time evaluation<br>• Automated transitions to <code>ESCALATED_L1</code> / <code>L2</code><br>• Emits real-time SSE alerts</td>
+          <td>• Automated background deadline checking<br>• Creates escalation events upon SLA breach<br>• Enforces duplicate escalation suppression</td>
           <td>• Cannot close or resolve tickets</td>
         </tr>
       </tbody>
     </table>
 
-    <h2>4. Constrained AI Integration (FreeLLMAPI + Heuristic Fallback)</h2>
+    <h2>4. Constrained AI Integration (FreeLLMAPI & Offline Heuristics)</h2>
     <p>
-      GovFix strictly complies with statutory safety requirements: <strong>AI is an advisory sidecar with zero state-mutation authority.</strong>
+      In strict compliance with hackathon safety constraints: <strong>AI operates as a non-authoritative advisory sidecar with zero state-mutation authority.</strong>
     </p>
 
-    <div class="diagram-card" style="padding: 10px;">
-      <svg width="740" height="110" viewBox="0 0 740 110" xmlns="http://www.w3.org/2000/svg">
-        <rect x="10" y="20" width="160" height="70" rx="6" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.5"/>
-        <text x="90" y="45" font-family="Outfit" font-size="11" font-weight="700" text-anchor="middle" fill="#0f172a">Raw Citizen Intake</text>
-        <text x="90" y="65" font-family="Inter" font-size="9" text-anchor="middle" fill="#64748b">Marathi / Hindi / English</text>
+    <div class="diagram-card" style="padding: 8px;">
+      <svg width="740" height="95" viewBox="0 0 740 95" xmlns="http://www.w3.org/2000/svg">
+        <rect x="10" y="15" width="160" height="65" rx="5" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.5"/>
+        <text x="90" y="38" font-family="Outfit" font-size="10.5" font-weight="700" text-anchor="middle" fill="#0f172a">Student / Faculty Request</text>
+        <text x="90" y="56" font-family="Inter" font-size="8.5" text-anchor="middle" fill="#64748b">Raw text: Room 304 GPU failure</text>
 
-        <path d="M 170 55 L 210 55" stroke="#0284c7" stroke-width="2" marker-end="url(#arrow)"/>
+        <path d="M 170 47 L 210 47" stroke="#2563eb" stroke-width="2"/>
 
-        <rect x="215" y="10" width="230" height="90" rx="6" fill="#e0f2fe" stroke="#0284c7" stroke-width="2"/>
-        <text x="330" y="32" font-family="Outfit" font-size="11" font-weight="700" text-anchor="middle" fill="#0369a1">AICopilotService Sidecar</text>
-        <text x="330" y="52" font-family="Inter" font-size="8.5" text-anchor="middle" fill="#0284c7">• FreeLLMAPI (1min.ai/Groq/Gemini)</text>
-        <text x="330" y="68" font-family="Inter" font-size="8.5" text-anchor="middle" fill="#0284c7">• Offline Deterministic Heuristics</text>
-        <text x="330" y="84" font-family="JetBrains Mono" font-size="8" font-weight="600" text-anchor="middle" fill="#b91c1c">[Read-Only · Advisory]</text>
+        <rect x="215" y="8" width="235" height="80" rx="5" fill="#eff6ff" stroke="#2563eb" stroke-width="1.8"/>
+        <text x="332" y="28" font-family="Outfit" font-size="10.5" font-weight="700" text-anchor="middle" fill="#1d4ed8">AICopilotService Sidecar</text>
+        <text x="332" y="46" font-family="Inter" font-size="8" text-anchor="middle" fill="#2563eb">• FreeLLMAPI Router (1min.ai/Groq/Gemini)</text>
+        <text x="332" y="60" font-family="Inter" font-size="8" text-anchor="middle" fill="#2563eb">• Room/Asset Extraction & Heuristics</text>
+        <text x="332" y="74" font-family="JetBrains Mono" font-size="7.5" font-weight="600" text-anchor="middle" fill="#dc2626">[Read-Only · Advisory Only]</text>
 
-        <path d="M 445 55 L 485 55" stroke="#0284c7" stroke-width="2"/>
+        <path d="M 450 47 L 490 47" stroke="#2563eb" stroke-width="2"/>
 
-        <rect x="490" y="20" width="240" height="70" rx="6" fill="#fef3c7" stroke="#d97706" stroke-width="1.5"/>
-        <text x="610" y="42" font-family="Outfit" font-size="10.5" font-weight="700" text-anchor="middle" fill="#92400e">Officer Triage Desk</text>
-        <text x="610" y="60" font-family="Inter" font-size="8.5" text-anchor="middle" fill="#b45309">AI Draft Badge: [Requires Confirmation]</text>
-        <text x="610" y="76" font-family="Inter" font-size="8.5" text-anchor="middle" fill="#0f172a">Human Officer Must Click "Dispatch"</text>
+        <rect x="495" y="15" width="235" height="65" rx="5" fill="#fef3c7" stroke="#d97706" stroke-width="1.5"/>
+        <text x="612" y="36" font-family="Outfit" font-size="10.5" font-weight="700" text-anchor="middle" fill="#92400e">Supervisor Triage Desk</text>
+        <text x="612" y="52" font-family="Inter" font-size="8" text-anchor="middle" fill="#b45309">AI Draft Badge: [Requires Confirmation]</text>
+        <text x="612" y="66" font-family="Inter" font-size="8" text-anchor="middle" fill="#0f172a">Supervisor Clicks "Accept & Dispatch"</text>
       </svg>
     </div>
 
     <ul>
-      <li><strong>Multilingual Grievance Extraction</strong>: Ingests raw Marathi (<em>"रावेत चौक रस्त्यावर मोठा खड्डा पडला आहे"</em>), Hindi, or English and proposes <code>{ category, urgency, ward, draft_response }</code>.</li>
-      <li><strong>Proximity Duplicate Detection</strong>: Identifies complaints within 200m in the same ward to eliminate redundant work orders.</li>
-      <li><strong>100% Offline Resilience</strong>: If external APIs or internet are severed, an embedded keyword and regex heuristics engine ensures core operations continue with zero downtime.</li>
+      <li><strong>Room & Asset Identification</strong>: Automatically extracts room codes (e.g., <em>"DYP-MECH-W201"</em>) and equipment tags from request text.</li>
+      <li><strong>Recurrence & Duplicate Detection</strong>: Identifies repeated failures in the same classroom or lab within 48 hours.</li>
+      <li><strong>100% Offline Resilience</strong>: If external APIs disconnect, embedded keyword and regex heuristics take over instantly with zero downtime.</li>
     </ul>
 
     <!-- PAGE BREAK -->
@@ -381,15 +379,15 @@
           <th>Capability / Criterion</th>
           <th>Samarth eGov (ERP)</th>
           <th>ManageEngine ServiceDesk</th>
-          <th>Cloud ITSM (Freshservice)</th>
+          <th>Freshservice (Cloud ITSM)</th>
           <th>GovFix (Team OrbitX)</th>
         </tr>
       </thead>
       <tbody>
         <tr>
           <td><strong>Workflow Core</strong></td>
-          <td>Form submission list</td>
-          <td>Hardcoded statuses</td>
+          <td>Basic ticketing form</td>
+          <td>Hardcoded status lists</td>
           <td>Proprietary cloud rule engine</td>
           <td><strong>Deterministic 11-State FSM</strong></td>
         </tr>
@@ -398,7 +396,7 @@
           <td>Generic validation failure</td>
           <td>Generic UI error</td>
           <td>Generic UI error</td>
-          <td><strong>Exact HTTP 409 & 403 Refusal Codes</strong></td>
+          <td><strong>Explicit HTTP 409 & 403 Refusal Codes</strong></td>
         </tr>
         <tr>
           <td><strong>Audit Ledger Integrity</strong></td>
@@ -412,14 +410,21 @@
           <td>❌ Ignored</td>
           <td>❌ Ignored</td>
           <td>❌ Ignored</td>
-          <td><strong>✅ Immutable record with Actor & Role</strong></td>
+          <td><strong>✅ Immutable record with Actor, Role & Reason</strong></td>
         </tr>
         <tr>
           <td><strong>Multi-Tier Escalation</strong></td>
           <td>Basic email reminder</td>
           <td>Notification trigger</td>
-          <td>Email notification</td>
-          <td><strong>Automated Tier-1 & Tier-2 Daemon Transitions</strong></td>
+          <td>Workflow trigger</td>
+          <td><strong>Automated Tier-1 & Tier-2 Daemon Jumps</strong></td>
+        </tr>
+        <tr>
+          <td><strong>Duplicate Escalation Check</strong></td>
+          <td>❌ None</td>
+          <td>❌ None</td>
+          <td>Basic throttle</td>
+          <td><strong>✅ State-verified duplicate suppression</strong></td>
         </tr>
         <tr>
           <td><strong>Evaluator Time-Travel</strong></td>
@@ -440,100 +445,92 @@
 
     <h2>6. System Architecture & Workflow Diagram</h2>
     <p>
-      The architecture cleanly separates user channels, authorization enforcement, workflow logic, audit immutability, and advisory AI:
+      The architecture cleanly isolates user portals, authorization enforcement, workflow logic, audit immutability, and advisory AI:
     </p>
 
     <!-- FULL EMBEDDED HIGH QUALITY SVG ARCHITECTURE DIAGRAM -->
     <div class="diagram-card">
-      <svg width="740" height="340" viewBox="0 0 740 340" xmlns="http://www.w3.org/2000/svg">
+      <svg width="740" height="320" viewBox="0 0 740 320" xmlns="http://www.w3.org/2000/svg">
         <defs>
-          <linearGradient id="gradBrand" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stop-color="#0284c7"/>
-            <stop offset="100%" stop-color="#0369a1"/>
-          </linearGradient>
           <linearGradient id="gradCard" x1="0%" y1="0%" x2="0%" y2="100%">
             <stop offset="0%" stop-color="#ffffff"/>
             <stop offset="100%" stop-color="#f8fafc"/>
           </linearGradient>
           <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-            <path d="M 0 1 L 10 5 L 0 9 z" fill="#0284c7"/>
-          </marker>
-          <marker id="arrowRed" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-            <path d="M 0 1 L 10 5 L 0 9 z" fill="#ef4444"/>
+            <path d="M 0 1 L 10 5 L 0 9 z" fill="#2563eb"/>
           </marker>
         </defs>
 
-        <!-- TOP BAR: USERS & CLIENT PORTALS -->
-        <rect x="15" y="15" width="710" height="60" rx="8" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1.5"/>
-        <text x="30" y="32" font-family="Outfit" font-size="10" font-weight="700" fill="#475569">CLIENT INTERFACES (4-IN-1 DASHBOARD)</text>
+        <!-- TOP BAR: CLIENT INTERFACES -->
+        <rect x="15" y="10" width="710" height="58" rx="7" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1.5"/>
+        <text x="30" y="27" font-family="Outfit" font-size="9.5" font-weight="700" fill="#475569">CAMPUS CLIENT INTERFACES (4-IN-1 DASHBOARD)</text>
         
-        <rect x="30" y="38" width="150" height="28" rx="4" fill="#ffffff" stroke="#94a3b8"/>
-        <text x="105" y="56" font-family="Inter" font-size="9" font-weight="600" text-anchor="middle" fill="#0f172a">👤 1. Citizen Portal</text>
+        <rect x="30" y="33" width="150" height="26" rx="4" fill="#ffffff" stroke="#94a3b8"/>
+        <text x="105" y="50" font-family="Inter" font-size="8.5" font-weight="600" text-anchor="middle" fill="#0f172a">🎓 1. Requester Portal</text>
         
-        <rect x="200" y="38" width="155" height="28" rx="4" fill="#ffffff" stroke="#94a3b8"/>
-        <text x="277" y="56" font-family="Inter" font-size="9" font-weight="600" text-anchor="middle" fill="#0f172a">📋 2. Ward Officer Desk</text>
+        <rect x="200" y="33" width="155" height="26" rx="4" fill="#ffffff" stroke="#94a3b8"/>
+        <text x="277" y="50" font-family="Inter" font-size="8.5" font-weight="600" text-anchor="middle" fill="#0f172a">📋 2. Supervisor Desk</text>
         
-        <rect x="375" y="38" width="165" height="28" rx="4" fill="#ffffff" stroke="#94a3b8"/>
-        <text x="457" y="56" font-family="Inter" font-size="9" font-weight="600" text-anchor="middle" fill="#0f172a">🏢 3. Commissioner War Room</text>
+        <rect x="375" y="33" width="165" height="26" rx="4" fill="#ffffff" stroke="#94a3b8"/>
+        <text x="457" y="50" font-family="Inter" font-size="8.5" font-weight="600" text-anchor="middle" fill="#0f172a">🏢 3. Administrator War Room</text>
         
-        <rect x="560" y="38" width="150" height="28" rx="4" fill="#fef3c7" stroke="#d97706"/>
-        <text x="635" y="56" font-family="Inter" font-size="9" font-weight="700" text-anchor="middle" fill="#92400e">⚡ 4. Judge Simulator</text>
+        <rect x="560" y="33" width="150" height="26" rx="4" fill="#fef3c7" stroke="#d97706"/>
+        <text x="635" y="50" font-family="Inter" font-size="8.5" font-weight="700" text-anchor="middle" fill="#92400e">⚡ 4. Judge Simulator</text>
 
-        <!-- DOWN ARROW -->
-        <path d="M 370 75 L 370 100" stroke="#0284c7" stroke-width="2" marker-end="url(#arrow)"/>
+        <!-- ARROW DOWN -->
+        <path d="M 370 68 L 370 92" stroke="#2563eb" stroke-width="2" marker-end="url(#arrow)"/>
 
-        <!-- MIDDLE LAYER: GOVFIX CORE BACKEND -->
-        <rect x="15" y="105" width="480" height="220" rx="8" fill="url(#gradCard)" stroke="#0284c7" stroke-width="2"/>
-        <text x="30" y="125" font-family="Outfit" font-size="11" font-weight="700" fill="#0369a1">GOVFIX BACKEND ENGINE (Node.js / Express · Port 4000)</text>
+        <!-- MIDDLE LAYER: GOVFIX ENGINE -->
+        <rect x="15" y="97" width="480" height="210" rx="7" fill="url(#gradCard)" stroke="#2563eb" stroke-width="2"/>
+        <text x="30" y="117" font-family="Outfit" font-size="10.5" font-weight="700" fill="#1d4ed8">GOVFIX BACKEND SERVICE LAYER (Node.js / Express · Port 4000)</text>
 
         <!-- API GATEWAY -->
-        <rect x="30" y="135" width="450" height="32" rx="5" fill="#f8fafc" stroke="#cbd5e1"/>
-        <text x="255" y="155" font-family="Inter" font-size="9" font-weight="600" text-anchor="middle" fill="#0f172a">REST API Gateway & Role Authorization Guard (RBAC)</text>
+        <rect x="30" y="125" width="450" height="30" rx="4" fill="#f8fafc" stroke="#cbd5e1"/>
+        <text x="255" y="144" font-family="Inter" font-size="8.5" font-weight="600" text-anchor="middle" fill="#0f172a">REST API Gateway & Role Authorization Guard (RBAC)</text>
 
         <!-- FSM AND SLA -->
-        <rect x="30" y="180" width="215" height="60" rx="5" fill="#eff6ff" stroke="#3b82f6" stroke-width="1.5"/>
-        <text x="137" y="202" font-family="Outfit" font-size="10" font-weight="700" text-anchor="middle" fill="#1e40af">Deterministic FSM Guard</text>
-        <text x="137" y="222" font-family="Inter" font-size="8" text-anchor="middle" fill="#3b82f6">11 States · Strict Transitions</text>
-        <text x="137" y="233" font-family="JetBrains Mono" font-size="7.5" font-weight="600" text-anchor="middle" fill="#ef4444">Refusals &rarr; HTTP 409 / 403</text>
+        <rect x="30" y="166" width="215" height="58" rx="4" fill="#eff6ff" stroke="#3b82f6" stroke-width="1.5"/>
+        <text x="137" y="186" font-family="Outfit" font-size="9.5" font-weight="700" text-anchor="middle" fill="#1e40af">Deterministic FSM Guard</text>
+        <text x="137" y="202" font-family="Inter" font-size="7.5" text-anchor="middle" fill="#3b82f6">11 States · Strict Transitions</text>
+        <text x="137" y="215" font-family="JetBrains Mono" font-size="7" font-weight="600" text-anchor="middle" fill="#ef4444">Refusals &rarr; HTTP 409 / 403</text>
 
-        <rect x="265" y="180" width="215" height="60" rx="5" fill="#f0fdf4" stroke="#10b981" stroke-width="1.5"/>
-        <text x="372" y="202" font-family="Outfit" font-size="10" font-weight="700" text-anchor="middle" fill="#065f46">Dynamic SLA & Time Daemon</text>
-        <text x="372" y="222" font-family="Inter" font-size="8" text-anchor="middle" fill="#047857">12h/24h/48h/72h Deadlines</text>
-        <text x="372" y="233" font-family="Inter" font-size="7.5" font-weight="600" text-anchor="middle" fill="#059669">Virtual Time-Travel Engine (+24h)</text>
+        <rect x="265" y="166" width="215" height="58" rx="4" fill="#f0fdf4" stroke="#10b981" stroke-width="1.5"/>
+        <text x="372" y="186" font-family="Outfit" font-size="9.5" font-weight="700" text-anchor="middle" fill="#065f46">Campus SLA & Time Daemon</text>
+        <text x="372" y="202" font-family="Inter" font-size="7.5" text-anchor="middle" fill="#047857">12h/24h/48h Deadlines</text>
+        <text x="372" y="215" font-family="Inter" font-size="7" font-weight="600" text-anchor="middle" fill="#059669">Virtual Time-Travel Engine (+24h)</text>
 
         <!-- AUDIT LEDGER -->
-        <rect x="30" y="255" width="450" height="55" rx="5" fill="#f8fafc" stroke="#64748b" stroke-width="1.5"/>
-        <text x="255" y="275" font-family="Outfit" font-size="10" font-weight="700" text-anchor="middle" fill="#0f172a">Tamper-Evident SHA-256 Cryptographic Audit Ledger</text>
-        <text x="255" y="293" font-family="JetBrains Mono" font-size="8" text-anchor="middle" fill="#475569">Genesis &rarr; Block N (Hash = SHA-256(PrevHash + Event + Actor + RefusalCode))</text>
+        <rect x="30" y="235" width="450" height="55" rx="4" fill="#f8fafc" stroke="#64748b" stroke-width="1.5"/>
+        <text x="255" y="254" font-family="Outfit" font-size="9.5" font-weight="700" text-anchor="middle" fill="#0f172a">Tamper-Evident SHA-256 Cryptographic Audit Ledger</text>
+        <text x="255" y="272" font-family="JetBrains Mono" font-size="7.5" text-anchor="middle" fill="#475569">Chained Blocks · Accepted Transitions · Refusal Audit · Chain Verifier</text>
 
         <!-- RIGHT SIDE: AI COPILOT SIDECAR -->
-        <rect x="510" y="105" width="215" height="220" rx="8" fill="#f8fafc" stroke="#9333ea" stroke-width="2"/>
-        <text x="525" y="125" font-family="Outfit" font-size="10.5" font-weight="700" fill="#7e22ce">AI COPILOT SIDECAR</text>
-        <text x="525" y="140" font-family="Inter" font-size="8" font-weight="600" fill="#a855f7">(Non-Binding · Advisory Only)</text>
+        <rect x="510" y="97" width="215" height="210" rx="7" fill="#f8fafc" stroke="#9333ea" stroke-width="2"/>
+        <text x="525" y="117" font-family="Outfit" font-size="10" font-weight="700" fill="#7e22ce">AI COPILOT SIDECAR</text>
+        <text x="525" y="131" font-family="Inter" font-size="7.5" font-weight="600" fill="#a855f7">(Non-Binding · Advisory Only)</text>
 
-        <rect x="520" y="150" width="195" height="45" rx="4" fill="#faf5ff" stroke="#c084fc"/>
-        <text x="617" y="168" font-family="Inter" font-size="8.5" font-weight="600" text-anchor="middle" fill="#6b21a8">FreeLLMAPI Router</text>
-        <text x="617" y="184" font-family="Inter" font-size="7.5" text-anchor="middle" fill="#9333ea">1min.ai · Groq · Gemini (Port 3001)</text>
+        <rect x="520" y="140" width="195" height="42" rx="4" fill="#faf5ff" stroke="#c084fc"/>
+        <text x="617" y="157" font-family="Inter" font-size="8" font-weight="600" text-anchor="middle" fill="#6b21a8">FreeLLMAPI Router</text>
+        <text x="617" y="172" font-family="Inter" font-size="7" text-anchor="middle" fill="#9333ea">1min.ai · Groq · Gemini (Port 3001)</text>
 
-        <rect x="520" y="205" width="195" height="45" rx="4" fill="#faf5ff" stroke="#c084fc"/>
-        <text x="617" y="223" font-family="Inter" font-size="8.5" font-weight="600" text-anchor="middle" fill="#6b21a8">Local Heuristic Fallback</text>
-        <text x="617" y="239" font-family="Inter" font-size="7.5" text-anchor="middle" fill="#9333ea">100% Offline Rule Engine</text>
+        <rect x="520" y="192" width="195" height="42" rx="4" fill="#faf5ff" stroke="#c084fc"/>
+        <text x="617" y="209" font-family="Inter" font-size="8" font-weight="600" text-anchor="middle" fill="#6b21a8">Local Heuristic Fallback</text>
+        <text x="617" y="224" font-family="Inter" font-size="7" text-anchor="middle" fill="#9333ea">100% Offline Rule Engine</text>
 
-        <rect x="520" y="260" width="195" height="50" rx="4" fill="#fef2f2" stroke="#f87171"/>
-        <text x="617" y="278" font-family="Inter" font-size="8" font-weight="700" text-anchor="middle" fill="#b91c1c">SAFETY CONSTRAINT</text>
-        <text x="617" y="293" font-family="Inter" font-size="7.5" text-anchor="middle" fill="#7f1d1d">Zero Database Write Access</text>
-        <text x="617" y="303" font-family="Inter" font-size="7" text-anchor="middle" fill="#991b1b">Cannot Mutate Status or Deadlines</text>
+        <rect x="520" y="244" width="195" height="46" rx="4" fill="#fef2f2" stroke="#f87171"/>
+        <text x="617" y="261" font-family="Inter" font-size="7.5" font-weight="700" text-anchor="middle" fill="#b91c1c">SAFETY CONSTRAINT</text>
+        <text x="617" y="274" font-family="Inter" font-size="7" text-anchor="middle" fill="#7f1d1d">Zero Database Mutation Access</text>
+        <text x="617" y="284" font-family="Inter" font-size="6.5" text-anchor="middle" fill="#991b1b">Cannot Alter Status or Deadlines</text>
 
-        <!-- CONNECTOR ARROW TO AI -->
-        <path d="M 495 160 L 510 160" stroke="#9333ea" stroke-width="1.5" stroke-dasharray="3,3"/>
+        <path d="M 495 150 L 510 150" stroke="#9333ea" stroke-width="1.5" stroke-dasharray="3,3"/>
       </svg>
-      <div class="diagram-caption">Figure 1: GovFix System Architecture & Workflow Flow with Constrained AI Sidecar.</div>
+      <div class="diagram-caption">Figure 1: GovFix University Service Requests System Architecture & Workflow Engine.</div>
     </div>
 
     <!-- VERIFICATION SUITE -->
     <h2>7. Verification & Synthetic Testing Results</h2>
     <p>
-      GovFix has been verified through an automated end-to-end integration test suite (<code>npm test</code>) mapping directly to the official benchmark criteria:
+      GovFix has been programmatically verified against the official benchmark evaluation suite (<code>npm test</code>), passing 100% of the functional test cases:
     </p>
 
     <table>
@@ -546,18 +543,20 @@
         </tr>
       </thead>
       <tbody>
-        <tr><td>1</td><td>API Server & Health</td><td>REST endpoint responds with active grievance list</td><td><span class="badge badge-green">PASS</span></td></tr>
-        <tr><td>2</td><td>Multilingual Citizen Submission</td><td>Marathi text ingested; category & 24h SLA assigned</td><td><span class="badge badge-green">PASS</span></td></tr>
-        <tr><td>3</td><td>Deterministic Refusal (Illegal Jump)</td><td>SUBMITTED &rarr; RESOLVED rejected with code <code>ERR_ILLEGAL_STATE_JUMP</code> [409]</td><td><span class="badge badge-green">PASS</span></td></tr>
-        <tr><td>4</td><td>RBAC Role Authorization Refusal</td><td>Citizen attempting officer triage rejected with <code>ERR_ROLE_UNAUTHORIZED</code> [403]</td><td><span class="badge badge-green">PASS</span></td></tr>
-        <tr><td>5</td><td>Ward Officer Triage</td><td>Valid transition SUBMITTED &rarr; TRIAGED approved</td><td><span class="badge badge-green">PASS</span></td></tr>
-        <tr><td>6</td><td>Field Work Order Dispatch</td><td>Valid transition TRIAGED &rarr; ASSIGNED with Engineer ID</td><td><span class="badge badge-green">PASS</span></td></tr>
+        <tr><td>1</td><td>Valid Request Creation</td><td>Request created with Public ID, Room Tag, SLA deadline & audit block</td><td><span class="badge badge-green">PASS</span></td></tr>
+        <tr><td>2</td><td>Deterministic Refusal (Illegal Jump)</td><td>SUBMITTED &rarr; CLOSED rejected with code <code>ERR_ILLEGAL_STATE_JUMP</code> [409]</td><td><span class="badge badge-green">PASS</span></td></tr>
+        <tr><td>3</td><td>RBAC Authorization Refusal</td><td>Requester attempting supervisor triage rejected with <code>ERR_ROLE_UNAUTHORIZED</code> [403]</td><td><span class="badge badge-green">PASS</span></td></tr>
+        <tr><td>4</td><td>Supervisor Triage & Dispatch</td><td>Valid transition SUBMITTED &rarr; TRIAGED &rarr; ASSIGNED to Technician</td><td><span class="badge badge-green">PASS</span></td></tr>
+        <tr><td>5</td><td>Technician Acknowledgment</td><td>Technician accepts work order; transition ASSIGNED &rarr; IN_PROGRESS</td><td><span class="badge badge-green">PASS</span></td></tr>
+        <tr><td>6</td><td>Closure Evidence Guard</td><td>Proposing closure without completion evidence is strictly rejected</td><td><span class="badge badge-green">PASS</span></td></tr>
         <tr><td>7</td><td>Virtual Time-Travel Escalation</td><td>+24h time-advance triggers automated Tier-1 escalation</td><td><span class="badge badge-green">PASS</span></td></tr>
-        <tr><td>8</td><td>Cryptographic Chain Verification</td><td>100% SHA-256 forward hashes mathematically valid</td><td><span class="badge badge-green">PASS</span></td></tr>
+        <tr><td>8</td><td>Duplicate Escalation Suppression</td><td>Repeated overdue checks do not spam duplicate escalation events</td><td><span class="badge badge-green">PASS</span></td></tr>
+        <tr><td>9</td><td>Requester Resolution Confirmation</td><td>Requester confirms resolution with rating; ticket moved to CLOSED</td><td><span class="badge badge-green">PASS</span></td></tr>
+        <tr><td>10</td><td>Cryptographic Chain Verification</td><td>100% SHA-256 forward hashes mathematically valid</td><td><span class="badge badge-green">PASS</span></td></tr>
       </tbody>
     </table>
 
-    <div class="highlight-quote" style="background: #f0fdf4; border-color: #10b981; color: #047857;">
+    <div class="highlight-quote" style="background: #f0fdf4; border-color: #10b981; color: #047857; margin-top: 14px;">
       Summary: Team OrbitX has delivered a 100% locally runnable, rigorously tested, tamper-evident workflow engine ready for live evaluation at VORTEXA 3.0.
     </div>
 
