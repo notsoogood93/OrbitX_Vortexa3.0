@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GovFix — Municipal Grievance Workflow Engine | PCMC & PMC Pune</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Top Navigation & Live Time Bar -->
+  <header class="navbar">
+    <div class="nav-brand">
+      <div class="brand-logo">🏛️</div>
+      <div>
+        <div class="brand-title">GovFix <span class="badge-tag">PCMC / PMC</span></div>
+        <div class="brand-subtitle">Configurable Municipal Workflow Engine · VORTEXA 3.0</div>
+      </div>
+    </div>
+
+    <!-- Live Simulation Time Controller -->
+    <div class="sim-clock-bar">
+      <div class="clock-icon">⏱️</div>
+      <div class="clock-details">
+        <span class="clock-label">MUNICIPAL SLA CLOCK:</span>
+        <span id="liveClockDisplay" class="clock-value">Syncing...</span>
+        <span id="virtualOffsetTag" class="badge-offset">+0.0h</span>
+      </div>
+      <div class="time-quick-actions">
+        <button id="btnTimeTravel12" class="btn-time-fast" title="Simulate +12 Hours">+12h</button>
+        <button id="btnTimeTravel24" class="btn-time-fast" title="Simulate +24 Hours">+24h</button>
+        <button id="btnTimeTravel48" class="btn-time-fast" title="Simulate +48 Hours">+48h</button>
+        <button id="btnTimeReset" class="btn-time-reset" title="Reset to Real-Time">Reset</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Navigation Tabs -->
+  <nav class="nav-tabs">
+    <button class="tab-btn active" data-tab="tab-citizen">
+      <span class="tab-icon">👤</span> 1. Citizen Portal
+    </button>
+    <button class="tab-btn" data-tab="tab-officer">
+      <span class="tab-icon">📋</span> 2. Ward Officer Desk
+      <span id="officerCountBadge" class="tab-pill">0</span>
+    </button>
+    <button class="tab-btn" data-tab="tab-commissioner">
+      <span class="tab-icon">🏢</span> 3. Commissioner War Room
+      <span id="escalationCountBadge" class="tab-pill badge-danger">0</span>
+    </button>
+    <button class="tab-btn tab-highlight" data-tab="tab-judge">
+      <span class="tab-icon">⚡</span> 4. Judge Live Simulator & Chaos Panel
+    </button>
+  </nav>
+
+  <!-- Notification Banner / Alert Bar -->
+  <div id="toastNotification" class="toast-container hidden"></div>
+
+  <main class="main-content">
+
+    <!-- ========================================================================= -->
+    <!-- TAB 1: CITIZEN GRIEVANCE PORTAL -->
+    <!-- ========================================================================= -->
+    <section id="tab-citizen" class="tab-pane active">
+      <div class="section-header">
+        <div>
+          <h2>Pune Citizen Grievance Portal</h2>
+          <p>Submit public complaints in <strong>Marathi, Hindi, or English</strong>. AI extracts location, ward, and urgency.</p>
+        </div>
+      </div>
+
+      <div class="portal-grid">
+        <!-- Complaint Form Card -->
+        <div class="card form-card">
+          <div class="card-header">
+            <h3>📝 Register Public Grievance (तक्रार नोंदणी)</h3>
+            <span class="badge-pill">Public Access</span>
+          </div>
+
+          <form id="citizenComplaintForm">
+            <div class="form-group">
+              <label>Your Name (नाव):</label>
+              <input type="text" id="citizenName" placeholder="e.g. Amit Kulkarni" required value="Aditya Shirsat">
+            </div>
+
+            <div class="form-group">
+              <label>Phone / Contact (मोबाईल क्रमांक):</label>
+              <input type="tel" id="citizenContact" placeholder="+91 98XXX XXXXX" required value="+91 98220 99887">
+            </div>
+
+            <div class="form-group">
+              <label>Location / Landmark (ठिकाण):</label>
+              <input type="text" id="citizenLocation" placeholder="e.g. Near Hinjawadi Phase 1 Wipro Circle" value="Baner Road, near Balewadi Phata">
+            </div>
+
+            <div class="form-group">
+              <label>Describe the Grievance (तक्रारीचे स्वरूप):</label>
+              <textarea id="citizenDescription" rows="4" placeholder="Enter details in Marathi, Hindi, or English..." required>बाणेर रोडवर काल रात्रीपासून पिण्याच्या पाण्याची पाईपलाईन फुटली आहे. लाखो लिटर पाणी वाया जात असून रस्ता खचला आहे.</textarea>
+            </div>
+
+            <!-- Quick Demo Prompts for Judges -->
+            <div class="sample-prompts">
+              <span class="prompts-title">💡 Quick Demo Pre-fills (Click to test):</span>
+              <div class="chips-container">
+                <button type="button" class="chip-btn" data-text="बाणेर रोडवर मोठा खड्डा पडला आहे, दुचाकी घसरून अपघात होत आहेत. त्वरित दुरुस्ती हवी." data-loc="Baner Road">
+                  📍 Pothole (Marathi)
+                </button>
+                <button type="button" class="chip-btn" data-text="Open electrical transformer wire hanging low near Hinjawadi school. Immediate safety hazard!" data-loc="Hinjawadi Phase 2">
+                  ⚡ Hazard Wire (Emergency)
+                </button>
+                <button type="button" class="chip-btn" data-text="हडपसर भाजी मंडई जवळ कचऱ्याचे ढीग साचले आहेत. महापालिकेने कचरा उचललेला नाही." data-loc="Hadapsar Market">
+                  🗑️ Solid Waste (Routine)
+                </button>
+              </div>
+            </div>
+
+            <button type="submit" id="btnSubmitGrievance" class="btn btn-primary btn-block">
+              🚀 Submit Grievance & Run Real-Time Triage
+            </button>
+          </form>
+        </div>
+
+        <!-- Citizen Ticket Tracking & Live Status -->
+        <div class="card tracking-card">
+          <div class="card-header">
+            <h3>🔍 Live Grievance Tracking & Citizen Verification</h3>
+            <span class="badge-pill">Citizen Verification</span>
+          </div>
+
+          <div class="ticket-select-bar">
+            <label>Select Complaint to Track:</label>
+            <select id="citizenTicketSelector" class="form-select"></select>
+          </div>
+
+          <div id="citizenTicketDetails" class="ticket-status-display">
+            <!-- Populated via JS -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================================= -->
+    <!-- TAB 2: WARD OFFICER WORKSPACE -->
+    <!-- ========================================================================= -->
+    <section id="tab-officer" class="tab-pane">
+      <div class="section-header">
+        <div>
+          <h2>Ward Officer Triage & Dispatch Desk</h2>
+          <p>Review incoming citizen complaints, verify side-by-side AI recommendations, and dispatch field work orders.</p>
+        </div>
+        <div class="role-badge">
+          <span class="role-dot"></span> Authorized Role: <strong>WARD_OFFICER</strong>
+        </div>
+      </div>
+
+      <div class="officer-layout">
+        <!-- Grievance Queue List -->
+        <div class="card officer-list-card">
+          <div class="card-header">
+            <h3>Active Ward Grievance Queue</h3>
+            <span id="officerFilterCount" class="badge-pill">5 Tickets</span>
+          </div>
+          <div id="officerTicketList" class="ticket-cards-scroll">
+            <!-- Populated via JS -->
+          </div>
+        </div>
+
+        <!-- Selected Grievance Management Panel -->
+        <div class="card officer-detail-card">
+          <div class="card-header">
+            <h3>Administrative Action & FSM Guard</h3>
+            <span id="selectedTicketStatusBadge" class="badge-state">SELECT TICKET</span>
+          </div>
+          <div id="officerActionPane" class="officer-pane-content">
+            <p class="placeholder-text">Select any grievance from the left to inspect AI recommendations, dispatch engineers, or sign off inspections.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================================= -->
+    <!-- TAB 3: COMMISSIONER ESCALATION WAR ROOM -->
+    <!-- ========================================================================= -->
+    <section id="tab-commissioner" class="tab-pane">
+      <div class="section-header">
+        <div>
+          <h2>Municipal Commissioner Accountability War Room</h2>
+          <p>High-level SLA governance across Pune Wards with automated escalation oversight.</p>
+        </div>
+        <div class="role-badge badge-comm">
+          <span class="role-dot red"></span> Authorized Role: <strong>SUPERVISING_COMMISSIONER</strong>
+        </div>
+      </div>
+
+      <!-- Stats Overview Counters -->
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <div class="metric-val" id="metricTotal">0</div>
+          <div class="metric-label">Total Registered Grievances</div>
+        </div>
+        <div class="metric-card metric-warning">
+          <div class="metric-val" id="metricL1">0</div>
+          <div class="metric-label">Tier-1 Escalations (Ward Level)</div>
+        </div>
+        <div class="metric-card metric-danger">
+          <div class="metric-val" id="metricL2">0</div>
+          <div class="metric-label">Tier-2 Escalations (Commissioner Intervention)</div>
+        </div>
+        <div class="metric-card metric-success">
+          <div class="metric-val" id="metricResolved">0</div>
+          <div class="metric-label">Successfully Closed / Verified</div>
+        </div>
+      </div>
+
+      <!-- Escalated Critical Grid -->
+      <div class="card escalation-table-card">
+        <div class="card-header">
+          <h3>🚨 Active SLA Escalation Roster</h3>
+          <span class="badge-pill badge-danger">Immediate Municipal Intervention</span>
+        </div>
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Ticket ID</th>
+                <th>Ward & Location</th>
+                <th>Category</th>
+                <th>Priority</th>
+                <th>Current Status</th>
+                <th>SLA Time Remaining</th>
+                <th>Commissioner Action</th>
+              </tr>
+            </thead>
+            <tbody id="commissionerEscalationTable">
+              <!-- Populated via JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================================= -->
+    <!-- TAB 4: JUDGE SIMULATOR & CHAOS TESTING PANEL -->
+    <!-- ========================================================================= -->
+    <section id="tab-judge" class="tab-pane">
+      <div class="section-header">
+        <div>
+          <h2>⚡ Judge Live Testing & Chaos Simulator</h2>
+          <p>Test edge cases, trigger illegal transitions to see refused codes, fast-forward time to test SLA auto-escalation, and verify cryptographic integrity.</p>
+        </div>
+        <div class="judge-badge">
+          <span>🏆 VORTEXA 3.0 EVALUATION HARNESS</span>
+        </div>
+      </div>
+
+      <div class="judge-grid">
+        <!-- Chaos Test 1: Illegal State Transition Refusal -->
+        <div class="card judge-card">
+          <div class="card-header">
+            <h3>🛡️ Test 1: Deterministic FSM Refusal Test</h3>
+            <span class="badge-tag">Rule Enforcement</span>
+          </div>
+          <p class="card-desc">Attempt prohibited transitions (e.g. Citizen trying to mark Resolved, or Officer skipping triage) to verify explicit system rejection and audit logging.</p>
+
+          <div class="form-group">
+            <label>Target Grievance:</label>
+            <select id="judgeTicketSelector" class="form-select"></select>
+          </div>
+
+          <div class="form-group">
+            <label>Simulate Role:</label>
+            <select id="judgeRoleSelector" class="form-select">
+              <option value="CITIZEN">CITIZEN (Unauthorized for Resolution/Assignment)</option>
+              <option value="WARD_OFFICER">WARD_OFFICER</option>
+              <option value="FIELD_ENGINEER">FIELD_ENGINEER</option>
+              <option value="SUPERVISING_COMMISSIONER">SUPERVISING_COMMISSIONER</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Attempt Target State:</label>
+            <select id="judgeTargetStateSelector" class="form-select">
+              <option value="RESOLVED">RESOLVED (Will refuse if not inspected)</option>
+              <option value="INSPECTION_PENDING">INSPECTION_PENDING (Will refuse if skipped)</option>
+              <option value="ASSIGNED">ASSIGNED</option>
+              <option value="CITIZEN_CONFIRMED">CITIZEN_CONFIRMED (Citizen only)</option>
+            </select>
+          </div>
+
+          <button id="btnExecuteJudgeTransition" class="btn btn-warning btn-block">
+            ⚡ Execute Transition Attempt
+          </button>
+
+          <div id="judgeTransitionResult" class="judge-result-box hidden"></div>
+        </div>
+
+        <!-- Chaos Test 2: Virtual Time-Travel SLA Escalation -->
+        <div class="card judge-card">
+          <div class="card-header">
+            <h3>⏱️ Test 2: Time-Travel SLA Auto-Escalation</h3>
+            <span class="badge-tag">SLA Engine</span>
+          </div>
+          <p class="card-desc">Simulate hours passing to verify that SLA deadlines trigger automated Tier-1 and Tier-2 escalations without human intervention.</p>
+
+          <div class="time-controls-grid">
+            <button class="btn btn-outline" onclick="window.govFix.advanceTime(12)">Fast Forward +12h</button>
+            <button class="btn btn-outline" onclick="window.govFix.advanceTime(24)">Fast Forward +24h</button>
+            <button class="btn btn-outline" onclick="window.govFix.advanceTime(48)">Fast Forward +48h</button>
+            <button class="btn btn-danger" onclick="window.govFix.resetTime()">Reset to Real Time</button>
+          </div>
+
+          <div class="escalation-feed">
+            <div class="feed-header">Auto-Escalation Daemon Output:</div>
+            <div id="judgeEscalationFeed" class="feed-box">
+              <span class="text-muted">Daemon active. Advance time above to test automated escalation triggers.</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Chaos Test 3: Tamper-Evident SHA-256 Audit Ledger -->
+        <div class="card judge-card full-width">
+          <div class="card-header">
+            <h3>🔐 Test 3: Cryptographic SHA-256 Audit Trail Verifier</h3>
+            <button id="btnVerifyChain" class="btn btn-sm btn-success">Verify Cryptographic Integrity</button>
+          </div>
+          <p class="card-desc">Every accepted transition, refused attempt, and escalation is cryptographically chained with SHA-256 hashes.</p>
+
+          <div id="auditVerificationBanner" class="audit-banner">
+            <span class="status-indicator-dot"></span>
+            <span id="auditBannerText">Chain Ready for Verification. Total Blocks: Loading...</span>
+          </div>
+
+          <div class="audit-table-wrap">
+            <table class="data-table audit-table">
+              <thead>
+                <tr>
+                  <th>Block #</th>
+                  <th>Timestamp</th>
+                  <th>Event Type</th>
+                  <th>Actor / Role</th>
+                  <th>Ticket</th>
+                  <th>Details & Refusal Codes</th>
+                  <th>Block Hash (SHA-256)</th>
+                </tr>
+              </thead>
+              <tbody id="auditLedgerTableBody">
+                <!-- Populated via JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
