@@ -158,6 +158,26 @@ export class SLAManager {
       });
     }
 
+    // Compute side-by-side policy comparison delta for each tier
+    const policyComparison = {};
+    const tiers = ['EMERGENCY', 'HIGH', 'STANDARD', 'ROUTINE'];
+    for (const tier of tiers) {
+      const cur = this.activePolicies[tier] || SLA_POLICIES[tier] || SLA_POLICIES.STANDARD;
+      const prop = proposedPolicies[tier] || proposedPolicies.STANDARD;
+      if (cur && prop) {
+        policyComparison[tier] = {
+          current: { l1BreachHours: cur.l1BreachHours, totalSlaHours: cur.totalSlaHours },
+          proposed: { l1BreachHours: prop.l1BreachHours, totalSlaHours: prop.totalSlaHours },
+          deltaHours: {
+            l1Delta: Number((prop.l1BreachHours - cur.l1BreachHours).toFixed(1)),
+            totalDelta: Number((prop.totalSlaHours - cur.totalSlaHours).toFixed(1)),
+          },
+        };
+      }
+    }
+
+    const statusChangeCount = results.filter((r) => r.statusChanged).length;
+
     return {
       success: true,
       isSimulation: true,
@@ -165,11 +185,14 @@ export class SLAManager {
       activePolicyVersion: this.activePolicyVersion,
       totalEvaluated: candidateTickets.length,
       affectedCount,
+      statusChangeCount,
       summary: {
         earlierOverdueCount,
         laterOverdueCount,
+        statusChangeCount,
         unchangedCount: candidateTickets.length - affectedCount,
       },
+      policyComparison,
       results,
     };
   }

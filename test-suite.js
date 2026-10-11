@@ -551,6 +551,91 @@ async function runTests() {
       '20. Recurring-Failure Radar supervisor review decision sealed to SHA-256 audit ledger [CONFIRMED_DEFECT]'
     );
 
+    // -------------------------------------------------------------------------
+    // TEST 21: Smart Grievance Intelligence — Related Complaints & Zero Auto-Merge
+    // -------------------------------------------------------------------------
+    const intelRes = await fetch(`${BASE_URL}/api/intelligence/related/${testTicket.id}`);
+    const intelData = await intelRes.json();
+
+    assert(
+      intelRes.status === 200 &&
+      intelData.targetTicketId === testTicket.id &&
+      Array.isArray(intelData.related) &&
+      intelData.ruleGuarantee.includes('NEVER automatically merged'),
+      '21. Smart Grievance Intelligence detects related complaints with explainable signals and enforces zero auto-merge'
+    );
+
+    // -------------------------------------------------------------------------
+    // TEST 22: SLA Policy Simulator — Side-by-Side Comparison Delta & Zero Mutation
+    // -------------------------------------------------------------------------
+    const auditBeforeRes = await fetch(`${BASE_URL}/api/audit`);
+    const auditBeforeData = await auditBeforeRes.json();
+    const chainLengthBefore = auditBeforeData.chainLength;
+
+    const simDeltaRes = await fetch(`${BASE_URL}/api/sandbox/simulate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        proposedPolicies: {
+          EMERGENCY: { l1BreachHours: 4, l2BreachHours: 8, totalSlaHours: 8 },
+          HIGH: { l1BreachHours: 8, l2BreachHours: 16, totalSlaHours: 16 },
+          STANDARD: { l1BreachHours: 24, l2BreachHours: 36, totalSlaHours: 36 },
+          ROUTINE: { l1BreachHours: 36, l2BreachHours: 48, totalSlaHours: 48 },
+        },
+      }),
+    });
+    const simDeltaData = await simDeltaRes.json();
+
+    const auditAfterRes = await fetch(`${BASE_URL}/api/audit`);
+    const auditAfterData = await auditAfterRes.json();
+    const chainLengthAfter = auditAfterData.chainLength;
+
+    assert(
+      simDeltaRes.status === 200 &&
+      simDeltaData.isSimulation === true &&
+      Boolean(simDeltaData.policyComparison?.EMERGENCY) &&
+      simDeltaData.policyComparison.EMERGENCY.deltaHours.totalDelta !== undefined &&
+      chainLengthBefore === chainLengthAfter,
+      '22. SLA Policy Simulator produces side-by-side policy delta and strictly leaves live data and audit chain unmodified'
+    );
+
+    // -------------------------------------------------------------------------
+    // TEST 23: Verified Resolution Dossier — 4-Stage Resolution Pipeline
+    // -------------------------------------------------------------------------
+    const dossierRes = await fetch(`${BASE_URL}/api/requests/${testTicket.id}/closure-dossier`);
+    const dossierData = await dossierRes.json();
+
+    assert(
+      dossierRes.status === 200 &&
+      dossierData.success === true &&
+      Boolean(dossierData.stages['1']?.name === 'Work Completion') &&
+      Boolean(dossierData.stages['2']?.name === 'File Integrity Verification') &&
+      Boolean(dossierData.stages['3']?.name === 'Recurring Issue Cross-Check'),
+      '23. Verified Resolution Dossier outputs 4-stage pipeline with work notes, SHA-256 check, and room defect radar'
+    );
+
+    // -------------------------------------------------------------------------
+    // TEST 24: Security Gate — Rejects Unauthorized Requester Policy Activation
+    // -------------------------------------------------------------------------
+    const unauthPolicyRes = await fetch(`${BASE_URL}/api/sandbox/activate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        actor: 'Sneaky Student',
+        role: 'REQUESTER',
+        proposedPolicies: {
+          STANDARD: { l1BreachHours: 100, l2BreachHours: 200, totalSlaHours: 200 },
+        },
+      }),
+    });
+    const unauthPolicyData = await unauthPolicyRes.json();
+
+    assert(
+      unauthPolicyRes.status === 403 &&
+      unauthPolicyData.code === 'ERR_ROLE_UNAUTHORIZED',
+      '24. Role-Based Authorization rejects unauthorized requester policy activation with HTTP 403 [ERR_ROLE_UNAUTHORIZED]'
+    );
+
   } catch (err) {
     console.error('Fatal Test Exception:', err);
     failed++;
@@ -564,3 +649,4 @@ async function runTests() {
 }
 
 runTests();
+

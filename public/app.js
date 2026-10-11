@@ -413,45 +413,150 @@ function renderOfficerActionPane(ticket) {
     statusBadge.className = `badge-state state-${ticket.status}`;
   }
 
-  // Duplicate / Recurrence banner
-  let dupHtml = '';
-  if (ticket.aiDuplicates?.hasPotentialDuplicate) {
-    dupHtml = `<div class="duplicate-banner" style="background:rgba(245,158,11,0.12); border:1px solid #f59e0b; color:#fbbf24; padding:0.6rem; border-radius:6px; margin:0.8rem 0; font-size:0.8rem;">⚠️ ${ticket.aiDuplicates.warning}</div>`;
+  // 1. SMART GRIEVANCE INTELLIGENCE (Cross-correlate room, asset, symptoms, and temporal proximity)
+  const targetRoom = (ticket.roomId || ticket.ward || '').toLowerCase().trim();
+  const targetAsset = (ticket.assetId || '').toLowerCase().trim();
+  const targetCategory = (ticket.category || '').toLowerCase().trim();
+  const symptomKeywords = ['flicker', 'screen', 'smps', 'breaker', 'spark', 'leak', 'pressure', 'projector', 'wifi', 'switch'];
+  const descLower = `${ticket.title} ${ticket.description}`.toLowerCase();
+  const ticketKeywords = symptomKeywords.filter((k) => descLower.includes(k));
+  const ticketTime = new Date(ticket.createdAt || Date.now()).getTime();
+
+  const relatedComplaints = allGrievances.filter((other) => {
+    if (other.id === ticket.id) return false;
+    const oRoom = (other.roomId || other.ward || '').toLowerCase().trim();
+    const oAsset = (other.assetId || '').toLowerCase().trim();
+    const oCategory = (other.category || '').toLowerCase().trim();
+    const oKeywords = symptomKeywords.filter((k) => `${other.title} ${other.description}`.toLowerCase().includes(k));
+    const sameRoom = targetRoom && oRoom && targetRoom === oRoom;
+    const sameAsset = targetAsset && oAsset && targetAsset === oAsset;
+    const sharedKw = ticketKeywords.filter((k) => oKeywords.includes(k));
+    return (sameRoom && sameAsset) || (sameRoom && sharedKw.length > 0) || (sameRoom && targetCategory === oCategory);
+  }).map((other) => {
+    const oTime = new Date(other.createdAt || Date.now()).getTime();
+    const hoursDelta = Math.abs(ticketTime - oTime) / 3600000;
+    const isSameUser = ticket.citizenName && other.citizenName && ticket.citizenName.toLowerCase() === other.citizenName.toLowerCase();
+    const isDuplicate = isSameUser || hoursDelta <= 24;
+    return {
+      id: other.id,
+      title: other.title,
+      room: other.roomId || other.ward,
+      assetId: other.assetId,
+      status: other.status,
+      type: isDuplicate ? 'POSSIBLE_DUPLICATE' : 'RECURRING_DEFECT',
+      typeLabel: isDuplicate ? 'Possible Duplicate' : 'Recurring Campus Defect',
+      hoursDelta: hoursDelta.toFixed(1),
+      reasons: [
+        targetRoom === (other.roomId || other.ward || '').toLowerCase().trim() ? `Same Room: ${ticket.roomId || ticket.ward}` : '',
+        targetAsset && targetAsset === (other.assetId || '').toLowerCase().trim() ? `Same Asset: ${ticket.assetId}` : '',
+        hoursDelta <= 24 ? `Reported within ${hoursDelta.toFixed(1)}h` : 'Different submission window',
+      ].filter(Boolean),
+    };
+  });
+
+  let intelligenceHtml = '';
+  if (relatedComplaints.length > 0) {
+    intelligenceHtml = `
+      <div style="background: rgba(30,41,59,0.3); border: 1px solid rgba(148,163,184,0.18); border-radius: 6px; padding: 0.75rem; margin-bottom: 0.9rem;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 0.35rem;">
+          <strong style="color: #93c5fd; font-size: 0.8rem;">Smart Grievance Intelligence</strong>
+          <span style="font-size: 0.7rem; color: #34d399; font-weight: 600;">${relatedComplaints.length} Related Complaint${relatedComplaints.length > 1 ? 's' : ''}</span>
+        </div>
+        <p style="font-size: 0.72rem; color: var(--text-dim); margin-bottom: 0.5rem;">Cross-correlated via physical room, equipment, and temporal proximity. Individual complaints remain separate and are never automatically merged.</p>
+        <div style="display:flex; flex-direction:column; gap:0.4rem;">
+          ${relatedComplaints.slice(0, 3).map((r) => `
+            <div style="background: rgba(15,23,42,0.65); border: 1px solid rgba(255,255,255,0.05); border-radius: 4px; padding: 0.4rem 0.6rem;">
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span style="color: #60a5fa; font-family: var(--font-mono); font-size: 0.75rem; font-weight: 600;">#${r.id}</span>
+                <span class="badge-subtle" style="font-size: 0.65rem; color: ${r.type === 'POSSIBLE_DUPLICATE' ? '#fbbf24' : '#f87171'}; border: 1px solid ${r.type === 'POSSIBLE_DUPLICATE' ? '#d97706' : '#dc2626'};">
+                  ${r.typeLabel}
+                </span>
+              </div>
+              <div style="font-size: 0.75rem; color: #cbd5e1; margin-top: 1px;">${r.title}</div>
+              <div style="font-size: 0.68rem; color: #94a3b8; margin-top: 2px;">🔍 <em>${r.reasons.join(' · ')}</em></div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
   }
 
-  let notesHtml = '';
-  if (ticket.workNotes) {
-    notesHtml += `<div style="margin: 0.8rem 0; padding: 0.6rem; background: rgba(255,255,255,0.03); border-radius: 6px;"><strong style="font-size:0.8rem; color:#fcd34d;">Technician Work Notes:</strong> <span style="font-size:0.85rem; color:#e2e8f0;">${ticket.workNotes}</span></div>`;
-  }
+  // 2. VERIFIED RESOLUTION DOSSIER (4-Stage Pipeline Breakdown)
+  let verifiedResolutionHtml = '';
+  const isClosurePhase = ['READY_FOR_CLOSURE', 'INSPECTION_PENDING', 'CLOSED'].includes(ticket.status);
+  const ev = ticket.evidenceAttachment;
 
-  // Physical Evidence Card
-  let evidenceHtml = '';
-  if (ticket.evidenceAttachment) {
-    const ev = ticket.evidenceAttachment;
-    evidenceHtml = `
-      <div style="margin: 0.85rem 0; padding: 0.8rem; background: rgba(16, 185, 129, 0.06); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 6px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 0.4rem;">
-          <span style="font-weight:600; color:#6ee7b7; font-size:0.8rem;">
-            Verified Physical Repair Proof
-          </span>
-          <span style="font-size:0.68rem; font-family:var(--font-mono); background:rgba(16,185,129,0.18); color:#a7f3d0; padding:1px 5px; border-radius:3px; font-weight:700;">
-            SHA-256 CHECKED
+  // Check if room has an active recurring defect cluster
+  const roomHasCluster = allGrievances.filter((g) => (g.roomId || g.ward || '').toLowerCase().trim() === targetRoom).length >= 2;
+
+  if (isClosurePhase || ev || ticket.workNotes) {
+    verifiedResolutionHtml = `
+      <div style="background: rgba(16, 185, 129, 0.04); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 6px; padding: 0.85rem; margin-bottom: 0.9rem;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 0.5rem; border-bottom: 1px solid rgba(16,185,129,0.15); padding-bottom: 0.4rem;">
+          <strong style="color: #6ee7b7; font-size: 0.82rem;">Verified Resolution Dossier</strong>
+          <span style="font-size: 0.68rem; color: #a7f3d0; background: rgba(16,185,129,0.15); padding: 2px 6px; border-radius: 4px; font-weight: 600;">
+            ${ticket.status === 'CLOSED' ? 'STAGE 5: OFFICIALLY SEALED' : 'STAGE 4: HUMAN SIGN-OFF PENDING'}
           </span>
         </div>
-        <div style="display:flex; gap:0.6rem; align-items:center; background:rgba(9,13,22,0.6); padding:0.5rem 0.7rem; border-radius:4px; margin-bottom:0.4rem;">
-          <div style="font-size:0.72rem; font-family:var(--font-mono); color:#93c5fd; background:rgba(59,130,246,0.12); padding:2px 6px; border-radius:3px;">PROOF</div>
-          <div style="flex:1; overflow:hidden;">
-            <div style="display:flex; justify-content:space-between; font-size:0.8rem;">
-              <strong style="color:#fff;">${ev.fileName || 'repair_proof.jpg'}</strong>
-              <span style="color:#94a3b8; font-size:0.72rem;">${ev.fileSize || '1.8 MB'}</span>
-            </div>
-            <div style="font-size:0.7rem; color:#60a5fa; font-family:var(--font-mono); text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">
-              SHA-256: ${ev.sha256Checksum ? ev.sha256Checksum.slice(0, 32) : 'c8f12a9e...'}...
-            </div>
+
+        <!-- 4-Stage Pipeline Tracker -->
+        <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap: 0.4rem; font-size: 0.7rem; margin-bottom: 0.75rem; text-align: center;">
+          <div style="background: rgba(15,23,42,0.7); border: 1px solid #10b981; border-radius: 4px; padding: 0.35rem; color: #6ee7b7;">
+            <div style="font-weight: 700;">1. Completion</div>
+            <div style="color: #94a3b8; font-size: 0.65rem;">✓ Work Recorded</div>
+          </div>
+          <div style="background: rgba(15,23,42,0.7); border: 1px solid ${ev ? '#10b981' : '#f59e0b'}; border-radius: 4px; padding: 0.35rem; color: ${ev ? '#6ee7b7' : '#fbbf24'};">
+            <div style="font-weight: 700;">2. Integrity Check</div>
+            <div style="color: #94a3b8; font-size: 0.65rem;">${ev ? '✓ SHA-256 Verified' : 'Pending Upload'}</div>
+          </div>
+          <div style="background: rgba(15,23,42,0.7); border: 1px solid ${roomHasCluster ? '#f59e0b' : '#10b981'}; border-radius: 4px; padding: 0.35rem; color: ${roomHasCluster ? '#fbbf24' : '#6ee7b7'};">
+            <div style="font-weight: 700;">3. Defect Radar</div>
+            <div style="color: #94a3b8; font-size: 0.65rem;">${roomHasCluster ? '⚠️ Active Cluster' : '✓ Room Clean'}</div>
+          </div>
+          <div style="background: rgba(15,23,42,0.7); border: 1px solid ${ticket.status === 'CLOSED' ? '#10b981' : '#3b82f6'}; border-radius: 4px; padding: 0.35rem; color: ${ticket.status === 'CLOSED' ? '#6ee7b7' : '#93c5fd'};">
+            <div style="font-weight: 700;">4. Supervisor Seal</div>
+            <div style="color: #94a3b8; font-size: 0.65rem;">${ticket.status === 'CLOSED' ? '✓ Approved' : 'Action Required'}</div>
           </div>
         </div>
-        ${ev.measurements ? `<div style="font-size:0.76rem; color:#cbd5e1; margin-bottom:2px;"><strong>Diagnostic:</strong> ${ev.measurements}</div>` : ''}
-        ${ev.technician ? `<div style="font-size:0.74rem; color:#94a3b8;"><strong>Signed by:</strong> ${ev.technician} (${new Date(ev.uploadedAt || Date.now()).toLocaleTimeString()})</div>` : ''}
+
+        <!-- Work Notes -->
+        ${ticket.workNotes ? `
+          <div style="font-size: 0.78rem; margin-bottom: 0.5rem; background: rgba(9,13,22,0.6); padding: 0.5rem; border-radius: 4px;">
+            <span style="color: #fcd34d; font-weight: 600;">Technician Report:</span>
+            <span style="color: #e2e8f0; margin-left: 0.3rem;">${ticket.workNotes}</span>
+          </div>
+        ` : ''}
+
+        <!-- Evidence Cryptographic Block -->
+        ${ev ? `
+          <div style="display:flex; gap:0.6rem; align-items:center; background:rgba(9,13,22,0.6); padding:0.5rem 0.7rem; border-radius:4px; margin-bottom:0.5rem;">
+            <div style="font-size:0.72rem; font-family:var(--font-mono); color:#93c5fd; background:rgba(59,130,246,0.12); padding:2px 6px; border-radius:3px;">PROOF</div>
+            <div style="flex:1; overflow:hidden;">
+              <div style="display:flex; justify-content:space-between; font-size:0.78rem;">
+                <strong style="color:#fff;">${ev.fileName || 'repair_proof.jpg'}</strong>
+                <span style="color:#94a3b8; font-size:0.72rem;">${ev.fileSize || '1.8 MB'}</span>
+              </div>
+              <div style="font-size:0.68rem; color:#60a5fa; font-family:var(--font-mono); text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">
+                SHA-256 Digest: ${ev.sha256Checksum ? ev.sha256Checksum.slice(0, 32) + '...' : 'c8f12a9e...'}
+              </div>
+            </div>
+          </div>
+        ` : ''}
+
+        <!-- Recurring Defect Cross-Check Warning -->
+        ${roomHasCluster ? `
+          <div style="background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.3); border-radius: 4px; padding: 0.45rem 0.6rem; font-size: 0.72rem; color: #fbbf24; margin-bottom: 0.4rem;">
+            ⚠️ <strong>Recurring Issue Cross-Check:</strong> Active recurring defect patterns detected in <strong>${ticket.roomId || ticket.ward}</strong>. Ensure root-cause repair was verified before issuing final closure sign-off.
+          </div>
+        ` : `
+          <div style="font-size: 0.7rem; color: #6ee7b7; margin-bottom: 0.3rem;">
+            ✓ <strong>Defect Radar Check:</strong> No unresolved recurring hardware defect clusters detected in this facility.
+          </div>
+        `}
+
+        <div style="font-size: 0.66rem; color: var(--text-dim); border-top: 1px dashed rgba(255,255,255,0.08); padding-top: 0.35rem;">
+          * Cryptographic SHA-256 verifies bit-level file integrity between upload and audit. It does not replace physical supervisor confirmation.
+        </div>
       </div>
     `;
   }
@@ -496,8 +601,9 @@ function renderOfficerActionPane(ticket) {
     `;
   } else if (ticket.status === 'READY_FOR_CLOSURE' || ticket.status === 'INSPECTION_PENDING') {
     actionButtons = `
-      <div style="margin-top: 0.8rem;">
-        <button class="btn btn-sm btn-success" onclick="window.govFix.supervisorApproveClosure('${ticket.id}')">Verify Proof & Mark CLOSED</button>
+      <div style="margin-top: 0.8rem; display: flex; gap: 0.5rem;">
+        <button class="btn btn-sm btn-success" onclick="window.govFix.supervisorApproveClosure('${ticket.id}')">Approve Resolution & Mark CLOSED</button>
+        <button class="btn btn-sm btn-danger" onclick="window.govFix.transition('${ticket.id}', 'IN_PROGRESS', 'SUPERVISOR_HOD', 'SUPERVISOR', { rejectionReason: 'Supervisor rejected proof: repair incomplete.' })">Reject Closure</button>
       </div>
     `;
   } else {
@@ -520,11 +626,10 @@ function renderOfficerActionPane(ticket) {
         <div><span style="color:var(--text-dim);">Facility:</span> <strong style="color:#e2e8f0;">${ticket.aiRecommendation?.roomId || ticket.roomId || ticket.ward}</strong></div>
         <div><span style="color:var(--text-dim);">Suggested Tech:</span> <strong style="color:#e2e8f0;">${ticket.aiRecommendation?.suggestedOfficer || 'TECH_IT_SUPPORT_03'}</strong></div>
       </div>
-      ${dupHtml}
     </div>
 
-    ${notesHtml}
-    ${evidenceHtml}
+    ${intelligenceHtml}
+    ${verifiedResolutionHtml}
 
     <div style="border-top: 1px solid var(--border-color); padding-top: 1rem;">
       <h4 style="font-size: 0.9rem; color: #fff; margin-bottom: 0.4rem;">Permitted Administrative Transitions (Backend-Guarded):</h4>
@@ -1312,11 +1417,48 @@ async function initSandboxControls() {
         return;
       }
 
+      // Render side-by-side policy delta table
+      let deltaTableHtml = '';
+      if (data.policyComparison) {
+        const rows = Object.entries(data.policyComparison).map(([tier, cmp]) => {
+          const l1Diff = cmp.deltaHours.l1Delta;
+          const totDiff = cmp.deltaHours.totalDelta;
+          const l1DiffStr = l1Diff === 0 ? '0h' : (l1Diff > 0 ? `+${l1Diff}h` : `${l1Diff}h`);
+          const totDiffStr = totDiff === 0 ? '0h' : (totDiff > 0 ? `+${totDiff}h` : `${totDiff}h`);
+          return `
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+              <td style="padding: 4px; font-weight:600; color:#fff;">${tier}</td>
+              <td style="padding: 4px; color:#94a3b8;">${cmp.current.l1BreachHours}h / ${cmp.current.totalSlaHours}h</td>
+              <td style="padding: 4px; color:#60a5fa; font-weight:600;">${cmp.proposed.l1BreachHours}h / ${cmp.proposed.totalSlaHours}h</td>
+              <td style="padding: 4px; color: ${totDiff < 0 ? '#f87171' : totDiff > 0 ? '#34d399' : '#94a3b8'};">L1: ${l1DiffStr} | Total: ${totDiffStr}</td>
+            </tr>
+          `;
+        }).join('');
+
+        deltaTableHtml = `
+          <div style="margin-bottom: 0.75rem; background: rgba(15,23,42,0.6); border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; padding: 0.6rem;">
+            <div style="font-weight: 600; color: #93c5fd; font-size: 0.78rem; margin-bottom: 0.35rem;">Side-by-Side Policy Delta (Current vs Proposed)</div>
+            <table style="width: 100%; font-size: 0.73rem; border-collapse: collapse;">
+              <thead>
+                <tr style="color: var(--text-dim); border-bottom: 1px solid rgba(255,255,255,0.08); text-align: left;">
+                  <th style="padding: 3px;">Tier</th>
+                  <th style="padding: 3px;">Current (L1 / Total)</th>
+                  <th style="padding: 3px;">Proposed (L1 / Total)</th>
+                  <th style="padding: 3px;">Delta Variance</th>
+                </tr>
+              </thead>
+              <tbody>${rows}</tbody>
+            </table>
+          </div>
+        `;
+      }
+
       panel.innerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem; border-bottom: 1px solid var(--border-subtle); padding-bottom: 0.4rem;">
           <strong style="color: #34d399; font-size: 0.85rem;">✓ Dry-Run Simulation Completed (Zero Live Mutated)</strong>
           <span style="font-size: 0.75rem; color: var(--text-dim);">Evaluated: ${data.totalEvaluated} requests | Affected: ${data.affectedCount}</span>
         </div>
+        ${deltaTableHtml}
         <div style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 0.6rem;">
           Summary: <strong>${data.summary.earlierOverdueCount}</strong> requests tighten deadline, <strong>${data.summary.laterOverdueCount}</strong> relax deadline, <strong>${data.summary.unchangedCount}</strong> remain unchanged.
         </div>

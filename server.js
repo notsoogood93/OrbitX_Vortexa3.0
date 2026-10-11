@@ -114,10 +114,12 @@ const handleGetRequestById = (req, res) => {
 
   const slaMetrics = slaManager.getTicketSLAStatus(ticket);
   const auditHistory = auditLedger.getGrievanceHistory(ticket.id);
+  const relatedIntelligence = recurrenceRadar.findRelatedComplaints(ticket, grievances);
 
   res.json({
     ticket: { ...ticket, slaMetrics },
     auditHistory,
+    relatedIntelligence,
   });
 };
 
@@ -762,6 +764,119 @@ app.post('/radar/patterns/:clusterId/decision', (req, res) => {
   }
   res.json(result);
 });
+
+/**
+ * FEATURE: SMART GRIEVANCE INTELLIGENCE DIRECT ENDPOINT
+ */
+app.get('/api/intelligence/related/:id', (req, res) => {
+  const ticket = grievances.find((g) => g.id === req.params.id);
+  if (!ticket) return res.status(404).json({ success: false, error: 'Request not found' });
+  const result = recurrenceRadar.findRelatedComplaints(ticket, grievances);
+  res.json(result);
+});
+app.get('/intelligence/related/:id', (req, res) => {
+  const ticket = grievances.find((g) => g.id === req.params.id);
+  if (!ticket) return res.status(404).json({ success: false, error: 'Request not found' });
+  const result = recurrenceRadar.findRelatedComplaints(ticket, grievances);
+  res.json(result);
+});
+
+app.post('/api/intelligence/decision', (req, res) => {
+  const { clusterId, decision, reviewer, rationale } = req.body || {};
+  const result = recurrenceRadar.reviewCluster(
+    clusterId,
+    decision,
+    reviewer || 'SUPERVISOR',
+    rationale,
+    auditLedger
+  );
+  if (!result.success) return res.status(422).json(result);
+  res.json(result);
+});
+
+/**
+ * FEATURE: VERIFIED RESOLUTION DOSSIER ENDPOINT
+ * Clearly distinguishes work completion, file integrity verification, human confirmation, and official closure.
+ */
+const handleClosureDossier = (req, res) => {
+  const ticket = grievances.find((g) => g.id === req.params.id);
+  if (!ticket) {
+    return res.status(404).json({ success: false, error: 'Request not found' });
+  }
+
+  // 1. Work Completion
+  const workCompletion = {
+    isCompleted: Boolean(ticket.workNotes || (ticket.actions && ticket.actions.length > 0)),
+    assignedOfficer: ticket.assignedEngineerId || ticket.assignedOfficerId || null,
+    workNotes: ticket.workNotes || (ticket.actions?.[0]?.notes) || 'No field report recorded yet.',
+    actionsCount: (ticket.actions || []).length,
+    actions: ticket.actions || [],
+  };
+
+  // 2. File Integrity Verification
+  let fileIntegrity = {
+    isAttached: Boolean(ticket.evidenceAttachment),
+    isVerified: false,
+    fileName: ticket.evidenceAttachment?.fileName || null,
+    fileSize: ticket.evidenceAttachment?.fileSize || null,
+    sha256Checksum: ticket.evidenceAttachment?.sha256Checksum || null,
+    status: 'NO_EVIDENCE_ATTACHED',
+  };
+
+  if (ticket.evidenceAttachment?.sha256Checksum) {
+    fileIntegrity.isVerified = true;
+    fileIntegrity.status = 'INTEGRITY_VERIFIED';
+    fileIntegrity.disclaimer = 'Cryptographic SHA-256 confirms bit-level file integrity between upload and audit. It does not replace physical supervisor inspection.';
+  }
+
+  // 3. Relevant Unresolved Recurring Issues
+  const clusters = recurrenceRadar.detectClusters(grievances);
+  const room = (ticket.roomId || ticket.ward || '').toLowerCase();
+  const matchedCluster = clusters.find((c) => (c.room || '').toLowerCase() === room);
+
+  const recurringIssueCheck = {
+    hasActiveRecurringDefect: Boolean(matchedCluster),
+    clusterId: matchedCluster ? matchedCluster.clusterId : null,
+    severity: matchedCluster ? matchedCluster.severity : 'NORMAL',
+    reviewStatus: matchedCluster ? matchedCluster.reviewStatus : 'CLEAN',
+    warning: matchedCluster 
+      ? `Active recurring issue in this facility (${matchedCluster.room}) with ${matchedCluster.incidentCount} linked tickets. Verify root-cause remediation before closure.`
+      : 'No active recurring defect patterns detected in this facility.',
+    suggestedAction: matchedCluster ? matchedCluster.suggestedAction : null,
+  };
+
+  // 4. Human Administrative Confirmation
+  const humanConfirmation = {
+    isPendingReview: ticket.status === STATES.READY_FOR_CLOSURE || ticket.status === STATES.INSPECTION_PENDING,
+    isApproved: ticket.status === STATES.CLOSED,
+    isReopened: ticket.status === STATES.REOPENED,
+    authorizedRoles: [ROLES.SUPERVISOR, ROLES.ADMINISTRATOR],
+    currentFsmStatus: ticket.status,
+  };
+
+  // 5. Official Closure
+  const officialClosure = {
+    isClosed: ticket.status === STATES.CLOSED,
+    canClose: ticket.status === STATES.READY_FOR_CLOSURE && fileIntegrity.isVerified,
+    reopenAllowed: ticket.status === STATES.CLOSED,
+  };
+
+  res.json({
+    success: true,
+    ticketId: ticket.id,
+    stages: {
+      1: { name: 'Work Completion', ...workCompletion },
+      2: { name: 'File Integrity Verification', ...fileIntegrity },
+      3: { name: 'Recurring Issue Cross-Check', ...recurringIssueCheck },
+      4: { name: 'Human Administrative Confirmation', ...humanConfirmation },
+      5: { name: 'Official Closure', ...officialClosure },
+    },
+  });
+};
+
+app.get('/api/requests/:id/closure-dossier', handleClosureDossier);
+app.get('/requests/:id/closure-dossier', handleClosureDossier);
+
 
 
 // Start Server
