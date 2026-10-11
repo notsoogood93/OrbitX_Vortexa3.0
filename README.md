@@ -23,7 +23,7 @@ Higher education campus infrastructure frequently collapses not because service 
 5. **Workflow Policy Sandbox (Feature 1)**: Allows administrators to dry-run simulate proposed SLA threshold rules against live requests with strict zero-mutation isolation before controlled, versioned activation.
 6. **Evidence Integrity Lab (Feature 2)**: Cryptographic byte-level verification of repair evidence files against immutable audit hashes with an isolated demonstration fixture detecting 1-byte file alterations.
 7. **Recurring-Failure Radar (Feature 3)**: Explainable heuristic clustering detecting chronic campus room and equipment defects with supervisor confirmation audit logging.
-8. **AI Containment Advisory Layer**: FreeLLMAPI router integration with 100% offline heuristic fallback for multilingual drafts (English & Marathi) and category suggestions. Strictly isolated from state mutations.
+8. **AI Containment Advisory Layer**: Robust multilingual AI advisory assistant with deterministic heuristic extraction for English and Marathi request categorization and drafts. Strictly isolated from state mutations.
 
 ---
 
@@ -49,15 +49,15 @@ npm start
 # http://localhost:4000
 ```
 
-### Run 20-Point Benchmark Verification Suite
+### Run 24-Point Benchmark Verification Suite
 ```powershell
 npm test
-# Executes all 20 end-to-end tests (100% Pass Target)
+# Executes all 24 end-to-end tests (100% Pass Target)
 ```
 
 ---
 
-## 🧪 Benchmark Test Results (20/20 Passing)
+## 🧪 Benchmark Test Results (24/24 Passing)
 
 ```
 =============================================================
@@ -76,7 +76,7 @@ npm test
   ✅ [PASS] 7. Proposing closure without completion evidence is strictly rejected with HTTP 422 [ERR_MISSING_EVIDENCE]
   ✅ [PASS] 8. Supervisor approves closure; ticket transitions to CLOSED with cryptographic audit block
   ✅ [PASS] 9. Requester reopens request; original ID and prior closure history preserved
-  ✅ [PASS] 10. SHA-256 Cryptographic Audit Ledger verified 100% Mathematically Valid
+  ✅ [PASS] 10. SHA-256 Cryptographic Audit Ledger verified 100% Mathematically Valid (60 chained blocks)
   ✅ [PASS] 11. Enterprise Telemetry (/health & /metrics) reports healthy subsystem status and active FSM/SLA engines
   ✅ [PASS] 12. Role-based Authentication (/auth/login) successfully generates authorized session credentials
   ✅ [PASS] 13. Officer Work Action (/requests/:id/actions) appended to audit log with SHA-256 block hash
@@ -87,9 +87,13 @@ npm test
   ✅ [PASS] 18. Evidence Integrity Lab tamper fixture catches byte modification without modifying original evidence record
   ✅ [PASS] 19. Recurring-Failure Radar clusters room/category signals and provides explainable suggested remediation
   ✅ [PASS] 20. Recurring-Failure Radar supervisor review decision sealed to SHA-256 audit ledger [CONFIRMED_DEFECT]
+  ✅ [PASS] 21. Smart Grievance Intelligence detects related complaints with explainable signals and enforces zero auto-merge
+  ✅ [PASS] 22. SLA Policy Simulator produces side-by-side policy delta and strictly leaves live data and audit chain unmodified
+  ✅ [PASS] 23. Verified Resolution Dossier outputs 4-stage pipeline with work notes, SHA-256 check, and room defect radar
+  ✅ [PASS] 24. Role-Based Authorization rejects unauthorized requester policy activation with HTTP 403 [ERR_ROLE_UNAUTHORIZED]
 
 =============================================================
-📊 BENCHMARK TEST RESULTS: 20 PASSED / 0 FAILED (100% Target Met)
+📊 BENCHMARK TEST RESULTS: 24 PASSED / 0 FAILED (100% Target Met)
 =============================================================
 ```
 
@@ -97,8 +101,9 @@ npm test
 
 ## 📑 Core Documentation Index
 
+- [VORTEXA 3.0 Hackathon (OrbitX).pptx](VORTEXA%203.0%20Hackathon%20%28OrbitX%29.pptx) — Official Presentation Pitch Deck.
+- [OrbitX_GovFix_Architecture_Report.pdf](OrbitX_GovFix_Architecture_Report.pdf) — Consolidated 4-page submission report.
 - [DEMO_GUIDE.md](DEMO_GUIDE.md) — Step-by-step click-by-click live demonstration script (15 steps).
 - [ARCHITECTURE.md](ARCHITECTURE.md) — Comprehensive technical architecture, FSM state graph, and invariants.
 - [SECURITY_NOTES.md](SECURITY_NOTES.md) — Threat model, defense-in-depth authorization, and ledger boundaries.
 - [VERIFICATION_REPORT.md](VERIFICATION_REPORT.md) — Empirical baseline audit and verification report.
-- [OrbitX_GovFix_Architecture_Report.pdf](OrbitX_GovFix_Architecture_Report.pdf) — Consolidated 4-page submission report.
