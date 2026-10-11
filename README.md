@@ -1,142 +1,104 @@
-# 🏛️ GovFix — Configurable Public-Institution Workflow Engine
-### Track: Municipal Grievance Resolution & Accountability Engine (PCMC / PMC Pune)
-**VORTEXA 3.0 Hackathon · Problem Statement: G-02 (Domain 7: Government Systems & GovTech)**
+# GovFix — Configurable Public-Institution Workflow Engine
+### Track: University Service Requests (Maintenance, IT Support & Campus Facilities)
+**VORTEXA 3.0 Hackathon · Problem Statement: G-02 (Domain 7: Government Systems & GovTech)**  
+**Target Institution Context:** Dr. D. Y. Patil Institute of Technology, Pimpri, Pune  
 
 ---
 
 ## 📌 Executive Summary
-Public grievance systems in municipalities often fail not because complaints aren't registered, but because **workflows stall in unmonitored limbo, deadlines pass silently, and no tamper-proof record exists of who changed a status or ignored an escalation.**
 
-**GovFix** is an institutional-grade, finite-state workflow engine designed for municipal administrations. It enforces:
-1. **Deterministic State Machine**: Strict role-based transitions that cryptographically refuse illegal state jumps or unauthorized moves.
-2. **Dynamic SLA & Multi-Tier Escalation Engine**: Real-time clocks per grievance category with automated supervisor escalation upon breach.
-3. **Tamper-Evident Audit History**: Every accepted transition, refused attempt, role verification, and escalation is signed and immutably logged.
-4. **Sidecar AI Intelligence (FreeLLMAPI)**: Multilingual Marathi/Hindi/English extraction, duplicate detection, and draft response generation that *informs* officers without silently overriding statutory authority.
+Higher education campus infrastructure frequently collapses not because service requests are unrecorded, but because **tickets languish in unmonitored limbo, SLA deadlines pass silently without automated escalation, and traditional relational databases permit mutable, retroactive editing of historical records.**
+
+**GovFix** is an institutional-grade, locally runnable, finite-state workflow engine purpose-built for campus maintenance and IT operations under one ironclad statutory principle:
+> **"Deterministic Rules Govern Authority, State Transitions & Deadlines; AI Informs But Never Overrides."**
 
 ---
 
-## 🗺️ System Architecture
+## 🚀 Key Features & Differentiators
 
-```mermaid
-flowchart TD
-    subgraph Citizens & Field Staff
-        C[Citizen: File / Track / Verify]
-        O[Field Officer: Triage / Work / Resolve]
-        S[Supervisor / Commissioner: Oversee / Escalate]
-    end
+1. **Deterministic Finite State Machine (FSM)**: Formally guards 10 lifecycle states (`DRAFT` $\rightarrow$ `SUBMITTED` $\rightarrow$ `TRIAGED` $\rightarrow$ `ASSIGNED` $\rightarrow$ `ACCEPTED` $\rightarrow$ `IN_PROGRESS` $\rightarrow$ `READY_FOR_CLOSURE` $\rightarrow$ `RESOLVED` $\rightarrow$ `CLOSED` $\rightarrow$ `REOPENED`). Illegal jumps return **HTTP 409 Conflict** (`ERR_ILLEGAL_STATE_JUMP`).
+2. **Backend-Enforced Role RBAC**: Unauthorized actions return **HTTP 403 Forbidden** (`ERR_ROLE_UNAUTHORIZED`) and are permanently logged as refusal blocks.
+3. **Dynamic SLA & Virtual Time-Travel Engine**: Fast-forward simulation clock (`+12h`, `+24h`, `+48h`, `Reset`) without modifying host OS time. Triggers automated Tier-1 (HOD) and Tier-2 (Registrar) escalations with duplicate-escalation suppression.
+4. **Tamper-Evident SHA-256 Audit Ledger**: Every accepted transition, refused attempt, action, and evidence attachment is forward-chained into an immutable ledger with 1-click mathematical verification.
+5. **Workflow Policy Sandbox (Feature 1)**: Allows administrators to dry-run simulate proposed SLA threshold rules against live requests with strict zero-mutation isolation before controlled, versioned activation.
+6. **Evidence Integrity Lab (Feature 2)**: Cryptographic byte-level verification of repair evidence files against immutable audit hashes with an isolated demonstration fixture detecting 1-byte file alterations.
+7. **Recurring-Failure Radar (Feature 3)**: Explainable heuristic clustering detecting chronic campus room and equipment defects with supervisor confirmation audit logging.
+8. **AI Containment Advisory Layer**: FreeLLMAPI router integration with 100% offline heuristic fallback for multilingual drafts (English & Marathi) and category suggestions. Strictly isolated from state mutations.
 
-    subgraph GovFix Engine [OrbitX_Vortexa3.0]
-        API[Gateway & Role Verifier]
-        FSM[Deterministic FSM Guard Engine]
-        SLA[SLA Clock & Auto-Escalation Daemon]
-        AUDIT[Tamper-Evident Cryptographic Ledger]
-    end
+---
 
-    subgraph AI Sidecar [FreeLLMAPI Router]
-        LLM[Multi-Model Inference: 1min.ai / Groq / Gemini]
-        EXTRACT[Multilingual Extraction: Category, Urgency, Ward]
-        DEDUP[Duplicate & Proximity Anomaly Detection]
-        DRAFT[Official Action Note & Citizen Update Drafter]
-    end
+## 🛠️ Quickstart & Local Execution
 
-    C & O & S -->|Role-Guarded Requests| API
-    API -->|Validate Permitted Transitions| FSM
-    FSM -- Illegal Transition -->|REJECT + Log Refusal Code| AUDIT
-    FSM -- Valid Transition -->|Accept + State Change| AUDIT
-    FSM <--> SLA
-    SLA -- Breach Detected -->|Auto-Escalate to Supervisor| FSM
-    
-    API -.->|Async Non-Blocking Analysis| LLM
-    LLM --> EXTRACT & DEDUP & DRAFT
-    EXTRACT & DRAFT -.->|Non-Binding Recommendations| O
+### Prerequisites
+- Node.js 18+ (tested on Node v24.20.0)
+- Zero paid API keys or cloud dependencies required
+
+### Installation & Startup
+```powershell
+# 1. Clone repository
+git clone https://github.com/notsoogood93/OrbitX_Vortexa3.0.git
+cd OrbitX_Vortexa3.0
+
+# 2. Install dependencies (Express & CORS)
+npm install
+
+# 3. Start GovFix Server (Port 4000)
+npm start
+
+# 4. Open Dashboard in Browser
+# http://localhost:4000
+```
+
+### Run 20-Point Benchmark Verification Suite
+```powershell
+npm test
+# Executes all 20 end-to-end tests (100% Pass Target)
 ```
 
 ---
 
-## 🔄 Finite State Machine (FSM) Lifecycle
+## 🧪 Benchmark Test Results (20/20 Passing)
 
-```mermaid
-stateDiagram-v2
-    [*] --> SUBMITTED : Citizen submits grievance
-    SUBMITTED --> TRIAGED : Officer reviews & categorizes
-    SUBMITTED --> REJECTED_INVALID : Officer rejects (with recorded reason)
-    TRIAGED --> ASSIGNED : Dispatched to Ward Engineer
-    ASSIGNED --> IN_PROGRESS : Engineer acknowledges & begins work
-    IN_PROGRESS --> INSPECTION_PENDING : Work finished, proof uploaded
-    INSPECTION_PENDING --> RESOLVED : Inspector verifies resolution
-    RESOLVED --> CITIZEN_CONFIRMED : Citizen confirms closure
-    RESOLVED --> REOPENED : Citizen rejects resolution (within 48h)
-    
-    %% Escalation Paths on SLA Breach
-    ASSIGNED --> ESCALATED_L1 : SLA Breach (> 24h unassigned)
-    IN_PROGRESS --> ESCALATED_L2 : SLA Breach (> 48h overdue)
-    ESCALATED_L1 --> IN_PROGRESS : Supervisor re-assigns priority
-    ESCALATED_L2 --> RESOLVED : Direct Commissioner intervention
+```
+=============================================================
+🧪 RUNNING GOVFIX 10-POINT BENCHMARK VERIFICATION TEST SUITE
+   Institution: Dr. D. Y. Patil Institute of Technology
+   Track: University Service Requests
+   Target Server: http://localhost:4000
+=============================================================
+
+  ✅ [PASS] 1. Valid request creation with public ID, SLA deadline, and initial audit block
+  ✅ [PASS] 2. Rejects invalid transition SUBMITTED -> CLOSED with HTTP 409 [ERR_ILLEGAL_STATE_JUMP]
+  ✅ [PASS] 3. Rejects unauthorized Requester triage attempt with HTTP 403 [ERR_ROLE_UNAUTHORIZED] and records audit
+  ✅ [PASS] 4. Officer rejects assignment; ticket safely returns to TRIAGED with reason retained
+  ✅ [PASS] 5. Virtual Time-Travel (+24h) detects overdue deadline and auto-escalates ticket
+  ✅ [PASS] 6. Duplicate escalation prevention successfully blocks repeated escalation events
+  ✅ [PASS] 7. Proposing closure without completion evidence is strictly rejected with HTTP 422 [ERR_MISSING_EVIDENCE]
+  ✅ [PASS] 8. Supervisor approves closure; ticket transitions to CLOSED with cryptographic audit block
+  ✅ [PASS] 9. Requester reopens request; original ID and prior closure history preserved
+  ✅ [PASS] 10. SHA-256 Cryptographic Audit Ledger verified 100% Mathematically Valid
+  ✅ [PASS] 11. Enterprise Telemetry (/health & /metrics) reports healthy subsystem status and active FSM/SLA engines
+  ✅ [PASS] 12. Role-based Authentication (/auth/login) successfully generates authorized session credentials
+  ✅ [PASS] 13. Officer Work Action (/requests/:id/actions) appended to audit log with SHA-256 block hash
+  ✅ [PASS] 14. Policy Sandbox dry-run simulation returns projected impacts while strictly leaving live requests and audit chain unchanged
+  ✅ [PASS] 15. Policy Sandbox rejects contradictory policy (L1 breach > L2 breach) with HTTP 422 [ERR_CONTRADICTORY_POLICY]
+  ✅ [PASS] 16. Policy Sandbox enforces administrator authorization and seals policy activation onto cryptographic audit ledger
+  ✅ [PASS] 17. Evidence Integrity Lab verifies pristine file bytes match recorded SHA-256 digest [INTEGRITY_VERIFIED]
+  ✅ [PASS] 18. Evidence Integrity Lab tamper fixture catches byte modification without modifying original evidence record
+  ✅ [PASS] 19. Recurring-Failure Radar clusters room/category signals and provides explainable suggested remediation
+  ✅ [PASS] 20. Recurring-Failure Radar supervisor review decision sealed to SHA-256 audit ledger [CONFIRMED_DEFECT]
+
+=============================================================
+📊 BENCHMARK TEST RESULTS: 20 PASSED / 0 FAILED (100% Target Met)
+=============================================================
 ```
 
-### State Transition & Role Matrix
-
-| Current State | Target State | Permitted Roles | Prerequisite Checks |
-| :--- | :--- | :--- | :--- |
-| `[*] (None)` | `SUBMITTED` | `CITIZEN` | Valid location, description, citizen contact |
-| `SUBMITTED` | `TRIAGED` | `OFFICER`, `SUPERVISOR` | Category, Ward & Priority verified |
-| `SUBMITTED` | `REJECTED_INVALID` | `OFFICER`, `SUPERVISOR` | Mandatory justification logged |
-| `TRIAGED` | `ASSIGNED` | `OFFICER`, `SUPERVISOR` | Target Field Engineer ID attached |
-| `ASSIGNED` | `IN_PROGRESS` | `FIELD_ENGINEER` | Engineer acknowledges work order |
-| `IN_PROGRESS` | `INSPECTION_PENDING` | `FIELD_ENGINEER` | Resolution notes & photo/evidence link attached |
-| `INSPECTION_PENDING` | `RESOLVED` | `OFFICER`, `SUPERVISOR` | On-site inspection sign-off |
-| `RESOLVED` | `CITIZEN_CONFIRMED` | `CITIZEN` | Citizen satisfaction score (1-5) |
-| `RESOLVED` | `REOPENED` | `CITIZEN` | Feedback note within 48h window |
-| *Any Active* | `ESCALATED_L1/L2` | `SYSTEM_SLA_DAEMON`, `SUPERVISOR` | Timestamp exceeds category deadline |
-
-#### 🛡️ Explicit Refusal Rules (Zero Silently Ignored Moves)
-- **Code `ERR_ROLE_UNAUTHORIZED`**: E.g., Citizen attempts to change status to `RESOLVED` or Officer attempts to bypass `CITIZEN_CONFIRMED`.
-- **Code `ERR_ILLEGAL_STATE_JUMP`**: E.g., Jumping from `SUBMITTED` directly to `RESOLVED` without triage/assignment.
-- **Code `ERR_MISSING_EVIDENCE`**: Attempting `INSPECTION_PENDING` without attaching work completion notes.
-- **Every refusal is immutably recorded** in the ticket's audit trail with timestamp, user ID, attempted state, and refusal reason.
-
 ---
 
-## ⏱️ Dynamic SLA & Auto-Escalation Timelines
+## 📑 Core Documentation Index
 
-| Category | Typical Pune Grievance | Target SLA | Tier-1 Escalation (Ward Officer) | Tier-2 Escalation (Municipal Commissioner) |
-| :--- | :--- | :--- | :--- | :--- |
-| **Emergency / Hazard** | Open electrical cable, sewer main burst | **12 Hours** | After 6 Hours | After 12 Hours |
-| **High Priority** | Arterial road pothole, contaminated water | **24 Hours** | After 12 Hours | After 24 Hours |
-| **Standard** | Streetlight malfunction, stray animal nuisance | **48 Hours** | After 36 Hours | After 48 Hours |
-| **Routine / Administrative** | Garbage collection delay, tree trimming | **72 Hours** | After 48 Hours | After 72 Hours |
-
-*Includes an interactive **Judge Time-Travel Panel** to advance simulated time by 12h/24h/48h to demonstrate live auto-escalations during testing.*
-
----
-
-## 🤖 Role of AI (FreeLLMAPI Non-Binding Copilot)
-
-In strict compliance with hackathon correctness rules (*"AI may inform decisions but must not silently override them"*):
-1. **Multilingual Grievance Extraction**: Accepts raw Marathi, Hindi, or conversational English text and proposes `{ category, urgency, ward, extracted_entities }`.
-2. **Duplicate & Cluster Detection**: Flags complaints from the same street/ward within 24 hours to prevent redundant work orders.
-3. **Official Action Drafter**: Proposes pre-formatted administrative responses and citizen notifications in Marathi/English for officer approval.
-4. **Transparent Badging**: All AI suggestions are badged as *"Draft - Requires Officer Confirmation"* and cannot mutate ticket status.
-
----
-
-## 📚 Documentation & Specifications Suite
-
-Complete institutional-grade specifications developed for the evaluation jury:
-1. [IEEE 830 Software Requirements Specification (SRS)](file:///c:/Users/SHRIKRISHNA/pune/OrbitX_Vortexa3.0/docs/SRS.md)
-2. [Product Requirements Document (PRD)](file:///c:/Users/SHRIKRISHNA/pune/OrbitX_Vortexa3.0/docs/PRD.md)
-3. [REST API Contracts & Refusal Codes](file:///c:/Users/SHRIKRISHNA/pune/OrbitX_Vortexa3.0/docs/API_CONTRACTS.md)
-4. [3-Minute Live Hackathon Demo Script](file:///c:/Users/SHRIKRISHNA/pune/OrbitX_Vortexa3.0/docs/DEMO_SCRIPT.md)
-5. [10-Slide Pitch Deck for Jury](file:///c:/Users/SHRIKRISHNA/pune/OrbitX_Vortexa3.0/docs/PITCH_DECK.md)
-
----
-
-## 📂 Implementation Roadmap (12-Hour Timeline)
-
-- [x] **Hour 1**: Problem statement selection, workflow architecture, state machine definition, repository bootstrapping.
-- [x] **Hours 2–3**: Core deterministic FSM engine, role-guarded middleware, dynamic SLA time-travel daemon, and tamper-evident SHA-256 audit ledger.
-- [x] **Hours 4–5**: FreeLLMAPI AI sidecar integration (multilingual Marathi/Hindi extraction, heuristics fallback, action drafter).
-- [x] **Hours 6–8**: 4-in-1 Interactive Web Dashboard (Citizen Portal, Ward Officer Desk, Commissioner War Room, and Judge Chaos Simulator).
-- [x] **Hours 9–10**: Automated 8-point verification test suite (`npm test`), edge-case refusal validation, documentation suite, and pitch deck.
-- [ ] **Hours 11–12**: Final jury rehearsal, live deployment bundle validation, and submission sign-off.
-
+- [DEMO_GUIDE.md](DEMO_GUIDE.md) — Step-by-step click-by-click live demonstration script (15 steps).
+- [ARCHITECTURE.md](ARCHITECTURE.md) — Comprehensive technical architecture, FSM state graph, and invariants.
+- [SECURITY_NOTES.md](SECURITY_NOTES.md) — Threat model, defense-in-depth authorization, and ledger boundaries.
+- [VERIFICATION_REPORT.md](VERIFICATION_REPORT.md) — Empirical baseline audit and verification report.
+- [OrbitX_GovFix_Architecture_Report.pdf](OrbitX_GovFix_Architecture_Report.pdf) — Consolidated 4-page submission report.

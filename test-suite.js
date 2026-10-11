@@ -377,6 +377,180 @@ async function runTests() {
       '13. Officer Work Action (/requests/:id/actions) appended to audit log with SHA-256 block hash'
     );
 
+    // -------------------------------------------------------------------------
+    // TEST 14: Workflow Policy Sandbox — Isolated Dry-Run Simulation (No Mutation)
+    // -------------------------------------------------------------------------
+    const beforeLiveRes = await (await fetch(`${BASE_URL}/api/requests`)).json();
+    const beforeAuditLength = (await (await fetch(`${BASE_URL}/api/audit`)).json()).chainLength;
+    const sampleTicketBefore = JSON.stringify(beforeLiveRes.requests[0]);
+
+    const simRes = await fetch(`${BASE_URL}/api/sandbox/simulate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        proposedPolicies: {
+          EMERGENCY: { label: 'Emergency / Hazard', totalSlaHours: 8, l1BreachHours: 4, l2BreachHours: 8 },
+          HIGH: { label: 'High Priority', totalSlaHours: 16, l1BreachHours: 8, l2BreachHours: 16 },
+          STANDARD: { label: 'Standard Priority', totalSlaHours: 36, l1BreachHours: 24, l2BreachHours: 36 },
+          ROUTINE: { label: 'Routine / Non-Urgent', totalSlaHours: 60, l1BreachHours: 36, l2BreachHours: 60 },
+        },
+      }),
+    });
+    const simData = await simRes.json();
+
+    const afterLiveRes = await (await fetch(`${BASE_URL}/api/requests`)).json();
+    const afterAuditLength = (await (await fetch(`${BASE_URL}/api/audit`)).json()).chainLength;
+    const sampleTicketAfter = JSON.stringify(afterLiveRes.requests[0]);
+
+    assert(
+      simRes.status === 200 &&
+      simData.success === true &&
+      simData.isSimulation === true &&
+      simData.results?.length > 0 &&
+      sampleTicketBefore === sampleTicketAfter &&
+      beforeAuditLength === afterAuditLength,
+      '14. Policy Sandbox dry-run simulation returns projected impacts while strictly leaving live requests and audit chain unchanged'
+    );
+
+    // -------------------------------------------------------------------------
+    // TEST 15: Workflow Policy Sandbox — Rejects Invalid or Contradictory Policy
+    // -------------------------------------------------------------------------
+    const invalidPolRes = await fetch(`${BASE_URL}/api/sandbox/simulate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        proposedPolicies: {
+          EMERGENCY: { label: 'Emergency', totalSlaHours: 10, l1BreachHours: 12, l2BreachHours: 10 }, // Contradiction: L1 > L2
+          HIGH: { label: 'High Priority', totalSlaHours: 24, l1BreachHours: 12, l2BreachHours: 24 },
+          STANDARD: { label: 'Standard Priority', totalSlaHours: 48, l1BreachHours: 36, l2BreachHours: 48 },
+          ROUTINE: { label: 'Routine', totalSlaHours: 72, l1BreachHours: 48, l2BreachHours: 72 },
+        },
+      }),
+    });
+    const invalidPolData = await invalidPolRes.json();
+
+    assert(
+      invalidPolRes.status === 422 &&
+      invalidPolData.valid === false &&
+      invalidPolData.code === 'ERR_CONTRADICTORY_POLICY',
+      '15. Policy Sandbox rejects contradictory policy (L1 breach > L2 breach) with HTTP 422 [ERR_CONTRADICTORY_POLICY]'
+    );
+
+    // -------------------------------------------------------------------------
+    // TEST 16: Workflow Policy Sandbox — Role Authorization Guard & Activation
+    // -------------------------------------------------------------------------
+    const unauthActRes = await fetch(`${BASE_URL}/api/sandbox/activate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        role: 'REQUESTER',
+        proposedPolicies: {
+          EMERGENCY: { label: 'Emergency', totalSlaHours: 10, l1BreachHours: 5, l2BreachHours: 10 },
+          HIGH: { label: 'High Priority', totalSlaHours: 20, l1BreachHours: 10, l2BreachHours: 20 },
+          STANDARD: { label: 'Standard Priority', totalSlaHours: 40, l1BreachHours: 20, l2BreachHours: 40 },
+          ROUTINE: { label: 'Routine', totalSlaHours: 60, l1BreachHours: 30, l2BreachHours: 60 },
+        },
+      }),
+    });
+
+    const authActRes = await fetch(`${BASE_URL}/api/sandbox/activate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        actor: 'Campus Registrar',
+        role: 'ADMINISTRATOR',
+        proposedPolicies: {
+          EMERGENCY: { label: 'Emergency', totalSlaHours: 10, l1BreachHours: 5, l2BreachHours: 10 },
+          HIGH: { label: 'High Priority', totalSlaHours: 20, l1BreachHours: 10, l2BreachHours: 20 },
+          STANDARD: { label: 'Standard Priority', totalSlaHours: 40, l1BreachHours: 20, l2BreachHours: 40 },
+          ROUTINE: { label: 'Routine', totalSlaHours: 60, l1BreachHours: 30, l2BreachHours: 60 },
+        },
+      }),
+    });
+    const authActData = await authActRes.json();
+
+    assert(
+      unauthActRes.status === 403 &&
+      authActRes.status === 200 &&
+      authActData.success === true &&
+      authActData.version?.startsWith('POL-v1.') &&
+      Boolean(authActData.auditBlock?.hash),
+      '16. Policy Sandbox enforces administrator authorization and seals policy activation onto cryptographic audit ledger'
+    );
+
+    // -------------------------------------------------------------------------
+    // TEST 17: Evidence Integrity Lab — Cryptographic Byte Verification Matches
+    // -------------------------------------------------------------------------
+    const verifyRes = await fetch(`${BASE_URL}/api/evidence/verify`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ evidenceId: 'EVID-DEMO-1001' }),
+    });
+    const verifyData = await verifyRes.json();
+
+    assert(
+      verifyRes.status === 200 &&
+      verifyData.success === true &&
+      verifyData.isMatch === true &&
+      verifyData.status === 'INTEGRITY_VERIFIED',
+      '17. Evidence Integrity Lab verifies pristine file bytes match recorded SHA-256 digest [INTEGRITY_VERIFIED]'
+    );
+
+    // -------------------------------------------------------------------------
+    // TEST 18: Evidence Integrity Lab — Isolated Tamper Demonstration Fixture
+    // -------------------------------------------------------------------------
+    const fixtureRes = await fetch(`${BASE_URL}/api/evidence/demo-tamper-fixture`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    const fixtureData = await fixtureRes.json();
+
+    assert(
+      fixtureRes.status === 200 &&
+      fixtureData.pristineVerification.isMatch === true &&
+      fixtureData.tamperedCopyVerification.isMatch === false &&
+      fixtureData.tamperedCopyVerification.status === 'TAMPER_DETECTED' &&
+      fixtureData.originalRecordUnmodified === true,
+      '18. Evidence Integrity Lab tamper fixture catches byte modification without modifying original evidence record'
+    );
+
+    // -------------------------------------------------------------------------
+    // TEST 19: Recurring-Failure Radar — Deterministic Pattern Detection
+    // -------------------------------------------------------------------------
+    const radarRes = await fetch(`${BASE_URL}/api/radar/patterns`);
+    const radarData = await radarRes.json();
+
+    assert(
+      radarRes.status === 200 &&
+      radarData.totalPatterns > 0 &&
+      radarData.patterns[0].matchingSignals.includes('SAME_PHYSICAL_ROOM') &&
+      Boolean(radarData.patterns[0].suggestedAction),
+      '19. Recurring-Failure Radar clusters room/category signals and provides explainable suggested remediation'
+    );
+
+    // -------------------------------------------------------------------------
+    // TEST 20: Recurring-Failure Radar — Supervisor Review Decision Sealed to Audit
+    // -------------------------------------------------------------------------
+    const firstClusterId = radarData.patterns[0].clusterId;
+    const reviewRes = await fetch(`${BASE_URL}/api/radar/patterns/${firstClusterId}/decision`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        decision: 'CONFIRM',
+        reviewer: 'Prof. Kulkarni (HOD Computer Eng)',
+        rationale: 'Confirmed recurring GPU power drop in Lab 304 workstation rack.',
+      }),
+    });
+    const reviewData = await reviewRes.json();
+
+    assert(
+      reviewRes.status === 200 &&
+      reviewData.success === true &&
+      reviewData.decision === 'CONFIRMED_DEFECT' &&
+      Boolean(reviewData.auditBlock?.hash),
+      '20. Recurring-Failure Radar supervisor review decision sealed to SHA-256 audit ledger [CONFIRMED_DEFECT]'
+    );
+
   } catch (err) {
     console.error('Fatal Test Exception:', err);
     failed++;

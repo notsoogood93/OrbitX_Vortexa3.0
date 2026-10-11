@@ -7,6 +7,8 @@ import { AuditLedger } from './src/engine/auditLedger.js';
 import { WorkflowFSM, STATES, ROLES, normalizeRole } from './src/engine/fsm.js';
 import { SLAManager } from './src/engine/sla.js';
 import { AICopilotService } from './src/services/aiCopilot.js';
+import { EvidenceLab } from './src/engine/evidenceLab.js';
+import { RecurrenceRadar } from './src/engine/recurrenceRadar.js';
 import { SEED_GRIEVANCES } from './src/data/seedData.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -33,6 +35,8 @@ app.use(express.static(path.join(__dirname, 'public')));
 const auditLedger = new AuditLedger();
 const slaManager = new SLAManager();
 const aiCopilot = new AICopilotService();
+const evidenceLab = new EvidenceLab();
+const recurrenceRadar = new RecurrenceRadar();
 
 // In-Memory Database initialized with seed records
 let grievances = SEED_GRIEVANCES.map((item) => {
@@ -532,22 +536,40 @@ app.get('/audit', handleAuditVerification);
 
 /**
  * Enterprise Telemetry & Health Endpoints (Section 08 Architecture Standard)
+ * Explicitly distinguishes application health from optional AI-service availability
  */
-const handleHealthCheck = (req, res) => {
+const handleHealthCheck = async (req, res) => {
   const auditStatus = auditLedger.verifyIntegrity();
+  let aiStatus = 'OFFLINE_FALLBACK_ACTIVE';
+  try {
+    const aiProbe = await fetch(`${aiCopilot.routerBaseUrl}/models`, {
+      signal: AbortSignal.timeout(500),
+    });
+    if (aiProbe.ok) aiStatus = 'ONLINE';
+  } catch {
+    aiStatus = 'OFFLINE_FALLBACK_ACTIVE';
+  }
+
   res.json({
     status: 'healthy',
     uptimeSeconds: Math.floor(process.uptime()),
     timestamp: slaManager.getCurrentTime().toISOString(),
     institution: 'Dr. D. Y. Patil Institute of Technology',
     track: 'University Service Requests',
-    version: '1.0.0',
+    version: '1.2.0',
     fsmEngine: 'ACTIVE',
     slaEngine: 'ACTIVE',
+    activePolicyVersion: slaManager.activePolicyVersion,
     auditLedger: {
       chainLength: auditLedger.chain.length,
       isValid: auditStatus.isValid,
       latestHash: auditStatus.latestHash,
+    },
+    aiService: {
+      status: aiStatus,
+      routerUrl: aiCopilot.routerBaseUrl,
+      advisoryMode: 'NON_BINDING',
+      note: 'Core deterministic workflow operates 100% autonomously without external AI dependence.',
     },
     activeTickets: grievances.length,
     memoryUsageMB: (process.memoryUsage().rss / (1024 * 1024)).toFixed(1),
@@ -566,6 +588,7 @@ const handleMetrics = (req, res) => {
   res.json({
     totalTickets: grievances.length,
     statusBreakdown: statusCounts,
+    activePolicyVersion: slaManager.activePolicyVersion,
     auditChainLength: auditLedger.chain.length,
     auditChainValid: auditMetrics.isValid,
     virtualTimeOffsetHours: Number((slaManager.virtualTimeOffsetMs / 3600000).toFixed(1)),
@@ -574,6 +597,171 @@ const handleMetrics = (req, res) => {
 };
 app.get('/metrics', handleMetrics);
 app.get('/api/metrics', handleMetrics);
+
+/**
+ * FEATURE 1: WORKFLOW POLICY SANDBOX ENDPOINTS
+ */
+app.get('/api/sandbox/policy', (req, res) => {
+  res.json(slaManager.getActivePolicy());
+});
+app.get('/sandbox/policy', (req, res) => {
+  res.json(slaManager.getActivePolicy());
+});
+
+app.post('/api/sandbox/simulate', (req, res) => {
+  const { proposedPolicies, customTime } = req.body || {};
+  if (!proposedPolicies) {
+    return res.status(400).json({ success: false, code: 'ERR_MISSING_PROPOSED_POLICY', error: 'Proposed policy configuration required.' });
+  }
+  const result = slaManager.simulatePolicy(proposedPolicies, grievances, customTime);
+  if (!result.success) {
+    return res.status(422).json(result);
+  }
+  res.json(result);
+});
+app.post('/sandbox/simulate', (req, res) => {
+  const { proposedPolicies, customTime } = req.body || {};
+  if (!proposedPolicies) {
+    return res.status(400).json({ success: false, code: 'ERR_MISSING_PROPOSED_POLICY', error: 'Proposed policy configuration required.' });
+  }
+  const result = slaManager.simulatePolicy(proposedPolicies, grievances, customTime);
+  if (!result.success) {
+    return res.status(422).json(result);
+  }
+  res.json(result);
+});
+
+app.post('/api/sandbox/activate', (req, res) => {
+  const { proposedPolicies, actor, role } = req.body || {};
+  const normalized = normalizeRole(role || ROLES.ADMINISTRATOR);
+  if (![ROLES.ADMINISTRATOR, ROLES.SUPERVISOR].includes(normalized)) {
+    return res.status(403).json({
+      success: false,
+      code: 'ERR_ROLE_UNAUTHORIZED',
+      error: 'Only Campus Supervisors or Administrators are authorized to activate workflow policies.',
+    });
+  }
+
+  const activation = slaManager.activatePolicy(proposedPolicies, actor || 'ADMIN_USER', normalized, auditLedger);
+  if (!activation.success) {
+    return res.status(422).json(activation);
+  }
+  res.json(activation);
+});
+app.post('/sandbox/activate', (req, res) => {
+  const { proposedPolicies, actor, role } = req.body || {};
+  const normalized = normalizeRole(role || ROLES.ADMINISTRATOR);
+  if (![ROLES.ADMINISTRATOR, ROLES.SUPERVISOR].includes(normalized)) {
+    return res.status(403).json({
+      success: false,
+      code: 'ERR_ROLE_UNAUTHORIZED',
+      error: 'Only Campus Supervisors or Administrators are authorized to activate workflow policies.',
+    });
+  }
+
+  const activation = slaManager.activatePolicy(proposedPolicies, actor || 'ADMIN_USER', normalized, auditLedger);
+  if (!activation.success) {
+    return res.status(422).json(activation);
+  }
+  res.json(activation);
+});
+
+/**
+ * FEATURE 2: EVIDENCE INTEGRITY LAB ENDPOINTS
+ */
+app.get('/api/evidence', (req, res) => {
+  res.json({ evidenceCount: evidenceLab.registry.size, evidence: evidenceLab.listEvidence() });
+});
+app.get('/evidence', (req, res) => {
+  res.json({ evidenceCount: evidenceLab.registry.size, evidence: evidenceLab.listEvidence() });
+});
+
+app.post('/api/evidence/verify', (req, res) => {
+  const { evidenceId, fileContentBase64, fileContentText } = req.body || {};
+  let candidateBuffer = null;
+  if (fileContentBase64) {
+    candidateBuffer = Buffer.from(fileContentBase64, 'base64');
+  } else if (fileContentText) {
+    candidateBuffer = Buffer.from(fileContentText, 'utf-8');
+  } else {
+    const rec = evidenceLab.registry.get(evidenceId);
+    if (rec) candidateBuffer = rec.rawBuffer;
+  }
+
+  const result = evidenceLab.verifyEvidence(evidenceId, candidateBuffer);
+  if (!result.success) {
+    return res.status(result.code === 'ERR_EVIDENCE_NOT_FOUND' ? 404 : 422).json(result);
+  }
+  res.json(result);
+});
+app.post('/evidence/verify', (req, res) => {
+  const { evidenceId, fileContentBase64, fileContentText } = req.body || {};
+  let candidateBuffer = null;
+  if (fileContentBase64) {
+    candidateBuffer = Buffer.from(fileContentBase64, 'base64');
+  } else if (fileContentText) {
+    candidateBuffer = Buffer.from(fileContentText, 'utf-8');
+  } else {
+    const rec = evidenceLab.registry.get(evidenceId);
+    if (rec) candidateBuffer = rec.rawBuffer;
+  }
+
+  const result = evidenceLab.verifyEvidence(evidenceId, candidateBuffer);
+  if (!result.success) {
+    return res.status(result.code === 'ERR_EVIDENCE_NOT_FOUND' ? 404 : 422).json(result);
+  }
+  res.json(result);
+});
+
+app.post('/api/evidence/demo-tamper-fixture', (req, res) => {
+  const result = evidenceLab.runTamperDemonstration();
+  res.json(result);
+});
+app.post('/evidence/demo-tamper-fixture', (req, res) => {
+  const result = evidenceLab.runTamperDemonstration();
+  res.json(result);
+});
+
+/**
+ * FEATURE 3: RECURRING-FAILURE RADAR ENDPOINTS
+ */
+app.get('/api/radar/patterns', (req, res) => {
+  const patterns = recurrenceRadar.detectClusters(grievances);
+  res.json({ totalPatterns: patterns.length, patterns });
+});
+app.get('/radar/patterns', (req, res) => {
+  const patterns = recurrenceRadar.detectClusters(grievances);
+  res.json({ totalPatterns: patterns.length, patterns });
+});
+
+app.post('/api/radar/patterns/:clusterId/decision', (req, res) => {
+  const { decision, reviewer, rationale } = req.body || {};
+  const result = recurrenceRadar.reviewCluster(
+    req.params.clusterId,
+    decision,
+    reviewer || 'SUPERVISOR',
+    rationale,
+    auditLedger
+  );
+  if (!result.success) {
+    return res.status(422).json(result);
+  }
+  res.json(result);
+});
+app.post('/radar/patterns/:clusterId/decision', (req, res) => {
+  const { decision, reviewer, rationale } = req.body || {};
+  const result = recurrenceRadar.reviewCluster(
+    req.params.clusterId,
+    decision,
+    reviewer || 'SUPERVISOR',
+    rationale,
+    auditLedger
+  );
+  if (!result.success) {
+    return res.status(422).json(result);
+  }
+  res.json(result);
+});
 
 
 // Start Server
