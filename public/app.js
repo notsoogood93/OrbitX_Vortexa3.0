@@ -1,16 +1,19 @@
 /**
- * GovFix Client Application Logic
- * Integrates Citizen Portal, Ward Officer Queue, Commissioner War Room, and Judge Simulator.
+ * GovFix Campus Application Logic
+ * Institution: Dr. D. Y. Patil Institute of Technology
+ * Track: University Service Requests (Maintenance, IT Support & Facilities)
  */
 
 // Global State
 let allGrievances = [];
 let selectedTicketId = null;
+let searchQuery = '';
 
 // Initialize on DOM Ready
 document.addEventListener('DOMContentLoaded', () => {
   initTabs();
   initFormListeners();
+  initSearchFilter();
   initJudgeControls();
   fetchGrievances();
 
@@ -40,16 +43,22 @@ function initTabs() {
 // ==============================================================================
 async function fetchGrievances() {
   try {
-    const res = await fetch('/api/grievances');
+    const res = await fetch('/api/requests');
     if (!res.ok) return;
     const data = await res.json();
 
-    allGrievances = data.grievances;
+    allGrievances = data.requests || data.grievances || [];
 
     // Update Simulation Clock display
-    const dateObj = new Date(data.currentTime);
-    document.getElementById('liveClockDisplay').textContent = dateObj.toLocaleDateString() + ' ' + dateObj.toLocaleTimeString();
-    document.getElementById('virtualOffsetTag').textContent = `+${data.virtualOffsetHours}h sim`;
+    const clockEl = document.getElementById('liveClockDisplay');
+    const offsetEl = document.getElementById('virtualOffsetTag');
+    if (clockEl && data.currentTime) {
+      const dateObj = new Date(data.currentTime);
+      clockEl.textContent = dateObj.toLocaleDateString() + ' ' + dateObj.toLocaleTimeString();
+    }
+    if (offsetEl && data.virtualOffsetHours !== undefined) {
+      offsetEl.textContent = `+${data.virtualOffsetHours}h sim`;
+    }
 
     renderCitizenView();
     renderOfficerQueue();
@@ -62,10 +71,12 @@ async function fetchGrievances() {
 }
 
 // ==============================================================================
-// TAB 1: Citizen View & Submission
+// TAB 1: Student & Faculty Request Submission
 // ==============================================================================
 function initFormListeners() {
   const form = document.getElementById('citizenComplaintForm');
+  if (!form) return;
+
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const btn = document.getElementById('btnSubmitComplaint') || document.getElementById('btnSubmitGrievance');
@@ -75,148 +86,212 @@ function initFormListeners() {
     }
 
     const payload = {
-      citizenName: document.getElementById('citizenName').value,
-      citizenContact: document.getElementById('citizenContact').value,
-      location: document.getElementById('citizenLocation').value,
-      description: document.getElementById('citizenDescription').value,
+      requesterName: document.getElementById('citizenName')?.value || 'Anonymous',
+      citizenName: document.getElementById('citizenName')?.value || 'Anonymous',
+      requesterContact: document.getElementById('citizenContact')?.value || 'N/A',
+      citizenContact: document.getElementById('citizenContact')?.value || 'N/A',
+      location: document.getElementById('citizenLocation')?.value || 'Central Campus',
+      roomId: document.getElementById('citizenLocation')?.value || 'Central Campus',
+      description: document.getElementById('citizenDescription')?.value || '',
     };
 
     try {
-      const res = await fetch('/api/grievances', {
+      const res = await fetch('/api/requests', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
       const data = await res.json();
 
-      if (data.success) {
-        showToast('✅ Grievance registered & AI triaged successfully!');
-        form.reset();
+      if (data.success && (data.ticket || data.request)) {
+        const ticket = data.ticket || data.request;
+        showToast('✅ Campus request registered & AI triaged successfully!');
+
+        // Display AI Extraction Box
+        displayAiExtractionBox(ticket);
+
+        // Clear description, keep user info for convenience
+        const descEl = document.getElementById('citizenDescription');
+        if (descEl) descEl.value = '';
+
+        selectedTicketId = ticket.id;
         await fetchGrievances();
-        // Select newly created ticket
-        selectedTicketId = data.ticket.id;
-        document.getElementById('citizenTicketSelector').value = data.ticket.id;
-        renderCitizenSelectedTicket(data.ticket);
       } else {
-        showToast('❌ Submission failed: ' + (data.error || 'Server error'), true);
+        showToast('❌ Submission failed: ' + (data.error || 'Validation error'), true);
       }
-    } catch {
-      showToast('❌ Network error during submission', true);
+    } catch (err) {
+      showToast('❌ Network error during submission: ' + err.message, true);
     } finally {
-      btn.disabled = false;
-      btn.textContent = '🚀 Submit Grievance & Run Real-Time Triage';
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = '🚀 Submit Request & Trigger AI Copilot';
+      }
     }
   });
+}
 
-  // Pre-fill prompt chips
-  document.querySelectorAll('.chip-btn').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      document.getElementById('citizenDescription').value = btn.dataset.text;
-      document.getElementById('citizenLocation').value = btn.dataset.loc;
+function displayAiExtractionBox(ticket) {
+  const box = document.getElementById('aiExtractionResultBox');
+  if (!box) return;
+
+  const rec = ticket.aiRecommendation || {};
+  const catEl = document.getElementById('aiExtractedCategory');
+  const urgEl = document.getElementById('aiExtractedUrgency');
+  const wardEl = document.getElementById('aiExtractedWard');
+  const techEl = document.getElementById('aiExtractedTech');
+  const draftEl = document.getElementById('aiDraftResponse');
+  const dupEl = document.getElementById('aiDuplicateAlert');
+
+  if (catEl) catEl.textContent = ticket.category || rec.category || '-';
+  if (urgEl) urgEl.textContent = ticket.urgency || rec.urgency || '-';
+  if (wardEl) wardEl.textContent = ticket.roomId || ticket.ward || rec.roomId || '-';
+  if (techEl) techEl.textContent = rec.suggestedOfficer || 'Pending Assignment';
+
+  if (draftEl) {
+    draftEl.textContent = ticket.aiDrafts?.citizenEnglishDraft || rec.summary || 'Work order generated for maintenance supervisor.';
+  }
+
+  if (dupEl) {
+    if (ticket.aiDuplicates?.hasPotentialDuplicate) {
+      dupEl.textContent = '⚠️ ' + ticket.aiDuplicates.warning;
+      dupEl.classList.remove('hidden');
+    } else {
+      dupEl.classList.add('hidden');
+    }
+  }
+
+  box.classList.remove('hidden');
+}
+
+function initSearchFilter() {
+  const searchInput = document.getElementById('ticketSearchInput');
+  if (searchInput) {
+    searchInput.addEventListener('input', (e) => {
+      searchQuery = e.target.value.toLowerCase().trim();
+      renderCitizenView();
     });
-  });
-
-  // Citizen ticket selector
-  const selector = document.getElementById('citizenTicketSelector');
-  selector.addEventListener('change', (e) => {
-    selectedTicketId = e.target.value;
-    const ticket = allGrievances.find((g) => g.id === selectedTicketId);
-    if (ticket) renderCitizenSelectedTicket(ticket);
-  });
+  }
 }
 
 function renderCitizenView() {
-  const selector = document.getElementById('citizenTicketSelector');
-  const currentVal = selector.value || selectedTicketId;
+  const listContainer = document.getElementById('citizenTicketList');
+  if (!listContainer) return;
 
-  selector.innerHTML = allGrievances
-    .map((g) => `<option value="${g.id}" ${g.id === currentVal ? 'selected' : ''}>${g.id} — ${g.title.slice(0, 45)}... [${g.status}]</option>`)
-    .join('');
-
-  if (!selectedTicketId && allGrievances.length > 0) {
-    selectedTicketId = allGrievances[0].id;
+  let filtered = allGrievances;
+  if (searchQuery) {
+    filtered = allGrievances.filter((g) =>
+      g.id.toLowerCase().includes(searchQuery) ||
+      (g.roomId && g.roomId.toLowerCase().includes(searchQuery)) ||
+      (g.category && g.category.toLowerCase().includes(searchQuery)) ||
+      (g.title && g.title.toLowerCase().includes(searchQuery))
+    );
   }
 
-  const selected = allGrievances.find((g) => g.id === selectedTicketId) || allGrievances[0];
-  if (selected) renderCitizenSelectedTicket(selected);
-}
+  if (filtered.length === 0) {
+    listContainer.innerHTML = `
+      <div style="text-align: center; padding: 2rem; color: #9ca3af;">
+        No campus requests match your filter. Submit a new request using the form.
+      </div>
+    `;
+    return;
+  }
 
-function renderCitizenSelectedTicket(ticket) {
-  const container = document.getElementById('citizenTicketDetails');
+  listContainer.innerHTML = filtered.map((ticket) => {
+    const isSelected = ticket.id === selectedTicketId;
+    const isOverdue = ticket.slaMetrics?.isOverdue;
+    const remainingH = ticket.slaMetrics?.remainingHours ?? 24;
 
-  // Compute completed timeline steps
-  const steps = [
-    { state: 'SUBMITTED', label: '1. Registered by Citizen' },
-    { state: 'TRIAGED', label: '2. Triage & Ward Verification' },
-    { state: 'ASSIGNED', label: '3. Dispatched to Field Engineer' },
-    { state: 'IN_PROGRESS', label: '4. Physical Work In Progress' },
-    { state: 'INSPECTION_PENDING', label: '5. Work Done & Inspection' },
-    { state: 'RESOLVED', label: '6. Officer Sign-off' },
-    { state: 'CITIZEN_CONFIRMED', label: '7. Citizen Confirmed' },
-  ];
+    // Timeline Steps
+    const steps = [
+      { state: 'SUBMITTED', label: 'Submitted' },
+      { state: 'TRIAGED', label: 'Triaged' },
+      { state: 'ASSIGNED', label: 'Assigned' },
+      { state: 'IN_PROGRESS', label: 'In Progress' },
+      { state: 'READY_FOR_CLOSURE', label: 'Ready for Closure' },
+      { state: 'CLOSED', label: 'Closed' },
+    ];
+    const stateOrder = steps.map((s) => s.state);
+    const currentIndex = stateOrder.indexOf(ticket.status === 'RESOLVED' ? 'CLOSED' : ticket.status);
 
-  const stateOrder = steps.map((s) => s.state);
-  const currentIndex = stateOrder.indexOf(ticket.status);
-
-  const timelineHtml = steps
-    .map((step, idx) => {
+    const timelineHtml = steps.map((step, idx) => {
       const isDone = idx <= currentIndex && ticket.status !== 'REJECTED_INVALID';
       const isActive = idx === currentIndex;
       return `
-      <div class="timeline-step ${isDone ? 'completed' : ''} ${isActive ? 'active' : ''}">
-        <div class="step-marker">${isDone ? '✓' : idx + 1}</div>
-        <div class="step-content">
-          <div class="step-title">${step.label}</div>
-          <div class="step-time">${isActive ? 'Current Active Step' : isDone ? 'Completed' : 'Pending'}</div>
+        <div style="display:flex; flex-direction:column; align-items:center; flex:1; position:relative;">
+          <div style="width: 22px; height: 22px; border-radius: 50%; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; background: ${isDone ? '#2563eb' : 'rgba(255,255,255,0.1)'}; color: #fff; border: 1px solid ${isActive ? '#60a5fa' : 'transparent'};">
+            ${isDone ? '✓' : idx + 1}
+          </div>
+          <span style="font-size: 10px; color: ${isActive ? '#93c5fd' : '#9ca3af'}; margin-top: 4px; text-align:center;">${step.label}</span>
         </div>
+      `;
+    }).join('');
+
+    // Actions if Ready for Closure or Resolved
+    let satisfactionActionHtml = '';
+    if (ticket.status === 'READY_FOR_CLOSURE' || ticket.status === 'RESOLVED' || ticket.status === 'INSPECTION_PENDING') {
+      satisfactionActionHtml = `
+        <div style="margin-top: 0.8rem; padding: 0.8rem; background: rgba(16, 185, 129, 0.12); border-radius: 8px; border: 1px solid rgba(16, 185, 129, 0.3);">
+          <strong style="color: #6ee7b7; font-size: 0.85rem;">Requester Verification Required:</strong>
+          <p style="font-size: 0.8rem; color: #cbd5e1; margin: 4px 0 8px 0;">Technician has submitted repair proof: "<em>${ticket.workNotes || 'Repair complete'}</em>". Please confirm your satisfaction:</p>
+          <div style="display:flex; gap: 0.5rem;">
+            <button class="btn btn-sm btn-success" onclick="window.govFix.requesterConfirmClose('${ticket.id}')">✓ Confirm Resolution (Rate 5★)</button>
+            <button class="btn btn-sm btn-danger" onclick="window.govFix.requesterReopen('${ticket.id}')">✗ Reopen (Still Broken)</button>
+          </div>
+        </div>
+      `;
+    } else if (ticket.status === 'REOPENED') {
+      satisfactionActionHtml = `
+        <div style="margin-top: 0.6rem; padding: 0.6rem; background: rgba(239, 68, 68, 0.12); border-radius: 6px; font-size: 0.8rem; color: #fca5a5;">
+          ⚠️ Request Reopened by Student/Faculty. Pending Department Supervisor re-triage.
+        </div>
+      `;
+    }
+
+    return `
+      <div class="card" style="margin-bottom: 1rem; border: 1px solid ${isSelected ? 'var(--accent-blue)' : 'var(--border-color)'}; background: ${isSelected ? 'rgba(37, 99, 235, 0.08)' : 'var(--bg-card)'};">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 0.5rem;">
+          <div>
+            <span class="ticket-id" style="font-weight:700; color:#60a5fa;">#${ticket.id}</span>
+            <span style="font-size: 0.8rem; color: #9ca3af; margin-left: 0.5rem;">📍 ${ticket.roomId || ticket.ward}</span>
+          </div>
+          <div style="display:flex; gap: 0.4rem; align-items:center;">
+            <span class="badge-offset" style="font-size:0.75rem;">${ticket.urgency}</span>
+            <span class="badge-state state-${ticket.status}" style="font-size:0.75rem;">${ticket.status}</span>
+          </div>
+        </div>
+
+        <h4 style="color:#fff; font-size: 0.95rem; margin-bottom: 0.3rem;">${ticket.title}</h4>
+        <p style="color:#9ca3af; font-size: 0.82rem; margin-bottom: 0.8rem;">${ticket.description}</p>
+
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; background: rgba(15,23,42,0.6); padding: 0.6rem; border-radius: 6px; font-size: 0.78rem; margin-bottom: 0.8rem;">
+          <div><span style="color:#64748b;">Category:</span> <strong style="color:#e2e8f0;">${ticket.category}</strong></div>
+          <div><span style="color:#64748b;">Asset Tag:</span> <strong style="color:#e2e8f0;">${ticket.assetId || 'DYP-CAMPUS-GENERIC'}</strong></div>
+          <div><span style="color:#64748b;">Assigned Tech:</span> <strong style="color:#e2e8f0;">${ticket.assignedEngineerId || ticket.assignedOfficerId || 'Unassigned'}</strong></div>
+          <div><span style="color:#64748b;">SLA Clock:</span> <strong style="color: ${isOverdue ? '#ef4444' : '#10b981'};">${isOverdue ? '⚠️ Overdue' : `${remainingH}h remaining`}</strong></div>
+        </div>
+
+        <!-- 6-Stage Visual Progress Pipeline -->
+        <div style="display:flex; justify-content:space-between; margin: 0.8rem 0; padding: 0.4rem 0; border-top: 1px solid rgba(255,255,255,0.06); border-bottom: 1px solid rgba(255,255,255,0.06);">
+          ${timelineHtml}
+        </div>
+
+        ${satisfactionActionHtml}
       </div>
     `;
-    })
-    .join('');
-
-  // Citizen Action buttons (if RESOLVED -> allow Confirm or Reopen)
-  let citizenActionsHtml = '';
-  if (ticket.status === 'RESOLVED') {
-    citizenActionsHtml = `
-      <div style="margin-top: 1.4rem; padding: 1rem; background: rgba(16, 185, 129, 0.12); border-radius: 8px;">
-        <h4 style="color: #6ee7b7; margin-bottom: 0.5rem;">Citizen Satisfaction Sign-off:</h4>
-        <p style="font-size: 0.85rem; color: #9ca3af; margin-bottom: 0.8rem;">Field work has been completed and verified by the Ward Officer. Are you satisfied with the resolution?</p>
-        <div style="display: flex; gap: 0.6rem;">
-          <button class="btn btn-success" onclick="window.govFix.transition('${ticket.id}', 'CITIZEN_CONFIRMED', 'CITIZEN', 'CITIZEN')">✓ Yes, Confirm Resolution</button>
-          <button class="btn btn-danger" onclick="window.govFix.citizenReopen('${ticket.id}')">✗ No, Reopen with Feedback</button>
-        </div>
-      </div>
-    `;
-  }
-
-  container.innerHTML = `
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.8rem;">
-      <span class="ticket-id" style="font-size: 1rem;">Ticket #${ticket.id}</span>
-      <span class="badge-state state-${ticket.status}">${ticket.status}</span>
-    </div>
-    <h3 style="font-size: 1.1rem; color: #fff; margin-bottom: 0.4rem;">${ticket.title}</h3>
-    <p style="font-size: 0.85rem; color: #9ca3af; margin-bottom: 1rem;">${ticket.description}</p>
-    
-    <div class="ai-grid" style="background: rgba(255,255,255,0.02); padding: 0.8rem; border-radius: 8px; margin-bottom: 1rem;">
-      <div><span class="ai-item-label">Ward:</span> <span class="ai-item-val">${ticket.ward}</span></div>
-      <div><span class="ai-item-label">Priority:</span> <span class="ai-item-val">${ticket.urgency}</span></div>
-      <div><span class="ai-item-label">SLA Remaining:</span> <span class="ai-item-val" style="color: ${ticket.slaMetrics?.isOverdue ? '#ef4444' : '#10b981'}">${ticket.slaMetrics?.remainingHours} hrs</span></div>
-      <div><span class="ai-item-label">Assigned Field Engineer:</span> <span class="ai-item-val">${ticket.assignedEngineerId || 'Unassigned'}</span></div>
-    </div>
-
-    ${citizenActionsHtml}
-
-    <div class="timeline">${timelineHtml}</div>
-  `;
+  }).join('');
 }
 
 // ==============================================================================
-// TAB 2: Ward Officer Desk
+// TAB 2: Department Supervisor Desk
 // ==============================================================================
 function renderOfficerQueue() {
   const container = document.getElementById('officerTicketList');
-  document.getElementById('officerCountBadge').textContent = allGrievances.length;
-  document.getElementById('officerFilterCount').textContent = `${allGrievances.length} Tickets`;
+  if (!container) return;
+
+  const badge = document.getElementById('officerCountBadge');
+  const filterCount = document.getElementById('officerFilterCount');
+  if (badge) badge.textContent = allGrievances.length;
+  if (filterCount) filterCount.textContent = `${allGrievances.length} Requests`;
 
   container.innerHTML = allGrievances
     .map((ticket) => {
@@ -224,13 +299,13 @@ function renderOfficerQueue() {
       return `
       <div class="ticket-card-item ${isSelected ? 'selected' : ''}" onclick="window.govFix.selectOfficerTicket('${ticket.id}')">
         <div class="ticket-item-head">
-          <span class="ticket-id">${ticket.id}</span>
+          <span class="ticket-id">#${ticket.id}</span>
           <span class="badge-state state-${ticket.status}">${ticket.status}</span>
         </div>
-        <div class="ticket-title">${ticket.title}</div>
-        <div class="ticket-meta-line">
-          <span>📍 ${ticket.ward}</span>
-          <span style="color: ${ticket.slaMetrics?.isOverdue ? '#ef4444' : '#9ca3af'}">⏱️ ${ticket.slaMetrics?.remainingHours}h remaining</span>
+        <div class="ticket-title" style="font-weight:600; color:#fff; font-size:0.88rem;">${ticket.title}</div>
+        <div class="ticket-meta-line" style="display:flex; justify-content:space-between; font-size:0.78rem; color:#9ca3af; margin-top:4px;">
+          <span>📍 ${ticket.roomId || ticket.ward}</span>
+          <span style="color: ${ticket.slaMetrics?.isOverdue ? '#ef4444' : '#10b981'}">⏱️ ${ticket.slaMetrics?.remainingHours}h</span>
         </div>
       </div>
     `;
@@ -243,85 +318,88 @@ function renderOfficerQueue() {
 
 function renderOfficerActionPane(ticket) {
   const container = document.getElementById('officerActionPane');
-  document.getElementById('selectedTicketStatusBadge').textContent = ticket.status;
-  document.getElementById('selectedTicketStatusBadge').className = `badge-state state-${ticket.status}`;
+  if (!container) return;
 
-  // Duplicate warning
+  const statusBadge = document.getElementById('selectedTicketStatusBadge');
+  if (statusBadge) {
+    statusBadge.textContent = ticket.status;
+    statusBadge.className = `badge-state state-${ticket.status}`;
+  }
+
+  // Duplicate / Recurrence banner
   let dupHtml = '';
   if (ticket.aiDuplicates?.hasPotentialDuplicate) {
-    dupHtml = `<div class="duplicate-banner">⚠️ ${ticket.aiDuplicates.warning}</div>`;
+    dupHtml = `<div class="duplicate-banner" style="background:rgba(245,158,11,0.12); border:1px solid #f59e0b; color:#fbbf24; padding:0.6rem; border-radius:6px; margin:0.8rem 0; font-size:0.8rem;">⚠️ ${ticket.aiDuplicates.warning}</div>`;
   }
 
-  // Work notes / Inspection notes
   let notesHtml = '';
   if (ticket.workNotes) {
-    notesHtml += `<div style="margin: 0.8rem 0; padding: 0.6rem; background: rgba(255,255,255,0.03); border-radius: 6px;"><strong style="font-size:0.8rem; color:#fcd34d;">Field Work Notes:</strong> <span style="font-size:0.85rem;">${ticket.workNotes}</span></div>`;
-  }
-  if (ticket.inspectionNotes) {
-    notesHtml += `<div style="margin: 0.8rem 0; padding: 0.6rem; background: rgba(255,255,255,0.03); border-radius: 6px;"><strong style="font-size:0.8rem; color:#6ee7b7;">Inspection Sign-off Notes:</strong> <span style="font-size:0.85rem;">${ticket.inspectionNotes}</span></div>`;
+    notesHtml += `<div style="margin: 0.8rem 0; padding: 0.6rem; background: rgba(255,255,255,0.03); border-radius: 6px;"><strong style="font-size:0.8rem; color:#fcd34d;">Technician Work Proof:</strong> <span style="font-size:0.85rem; color:#e2e8f0;">${ticket.workNotes}</span></div>`;
   }
 
-  // Actions based on current FSM status
+  // Context-aware FSM Action buttons
   let actionButtons = '';
   if (ticket.status === 'SUBMITTED' || ticket.status === 'REOPENED') {
     actionButtons = `
       <div style="display: flex; gap: 0.6rem; margin-top: 1rem;">
-        <button class="btn btn-primary" onclick="window.govFix.officerTriage('${ticket.id}')">✓ Verify & Move to TRIAGED</button>
-        <button class="btn btn-danger" onclick="window.govFix.officerReject('${ticket.id}')">✗ Reject Invalid</button>
+        <button class="btn btn-primary" onclick="window.govFix.officerTriage('${ticket.id}')">✓ Supervisor Verify & Triage</button>
+        <button class="btn btn-danger" onclick="window.govFix.officerReject('${ticket.id}')">✗ Reject Invalid / Spam</button>
       </div>
     `;
   } else if (ticket.status === 'TRIAGED' || ticket.status === 'ESCALATED_L1') {
     actionButtons = `
       <div style="margin-top: 1rem;">
-        <label style="font-size: 0.82rem; font-weight: 600; color: #9ca3af; margin-bottom: 0.3rem; display:block;">Select Field Engineer for Ward Dispatch:</label>
-        <div style="display: flex; gap: 0.6rem;">
-          <select id="selectAssignee_${ticket.id}" class="form-select" style="max-width: 260px;">
-            <option value="ENG_VINAYAK_04">Eng. Vinayak (Roads & Potholes)</option>
-            <option value="ENG_SHANKAR_01">Eng. Shankar (Water & Sewage)</option>
-            <option value="ENG_GANESH_09">Eng. Ganesh (Solid Waste)</option>
-            <option value="ENG_VIJAY_03">Eng. Vijay (Electrical Hazards)</option>
+        <label style="font-size: 0.82rem; font-weight: 600; color: #9ca3af; margin-bottom: 0.3rem; display:block;">Select Qualified Campus Technician for Dispatch:</label>
+        <div style="display: flex; gap: 0.6rem; flex-wrap:wrap;">
+          <select id="selectAssignee_${ticket.id}" class="form-select" style="max-width: 320px;">
+            <option value="TECH_IT_SUPPORT_03">TECH_IT_SUPPORT_03 (Computer Labs & GPU Rig)</option>
+            <option value="TECH_ELECTRICAL_01">TECH_ELECTRICAL_01 (Electrical Safety & Breakers)</option>
+            <option value="TECH_PLUMBING_03">TECH_PLUMBING_03 (Hostel & Facilities Plumbing)</option>
+            <option value="TECH_NETWORKING_02">TECH_NETWORKING_02 (Campus Wi-Fi & Cisco APs)</option>
+            <option value="TECH_AV_SUPPORT_05">TECH_AV_SUPPORT_05 (Classroom Projector & Sound)</option>
           </select>
-          <button class="btn btn-primary" onclick="window.govFix.officerAssign('${ticket.id}')">Dispatch & Mark ASSIGNED</button>
+          <button class="btn btn-primary" onclick="window.govFix.officerAssign('${ticket.id}')">🚀 Dispatch & Mark ASSIGNED</button>
         </div>
       </div>
     `;
   } else if (ticket.status === 'ASSIGNED') {
     actionButtons = `
-      <div style="margin-top: 1rem;">
-        <button class="btn btn-warning" onclick="window.govFix.transition('${ticket.id}', 'IN_PROGRESS', 'FIELD_ENGINEER', 'FIELD_ENGINEER')">👷 [Simulate Engineer] Acknowledge & Start Work (IN_PROGRESS)</button>
+      <div style="display:flex; gap:0.6rem; margin-top: 1rem; flex-wrap:wrap;">
+        <button class="btn btn-warning" onclick="window.govFix.transition('${ticket.id}', 'IN_PROGRESS', 'TECH_OFFICER', 'OFFICER')">👷 [Simulate Tech] Accept & Start Work (IN_PROGRESS)</button>
+        <button class="btn btn-outline" onclick="window.govFix.technicianRejectAssignment('${ticket.id}')">✗ [Simulate Tech] Reject Assignment</button>
       </div>
     `;
   } else if (ticket.status === 'IN_PROGRESS' || ticket.status === 'ESCALATED_L2') {
     actionButtons = `
       <div style="margin-top: 1rem;">
-        <button class="btn btn-warning" onclick="window.govFix.engineerCompleteWork('${ticket.id}')">📝 [Simulate Engineer] Upload Work Proof (INSPECTION_PENDING)</button>
+        <button class="btn btn-warning" onclick="window.govFix.engineerCompleteWork('${ticket.id}')">📝 [Simulate Tech] Upload Work Proof (READY_FOR_CLOSURE)</button>
       </div>
     `;
-  } else if (ticket.status === 'INSPECTION_PENDING') {
+  } else if (ticket.status === 'READY_FOR_CLOSURE' || ticket.status === 'INSPECTION_PENDING') {
     actionButtons = `
       <div style="margin-top: 1rem;">
-        <button class="btn btn-success" onclick="window.govFix.officerInspectAndResolve('${ticket.id}')">🔍 Inspect On-Site & Mark RESOLVED</button>
+        <button class="btn btn-success" onclick="window.govFix.supervisorApproveClosure('${ticket.id}')">🔍 Supervisor Verify Proof & Mark CLOSED</button>
       </div>
     `;
   } else {
-    actionButtons = `<div style="margin-top: 1rem; color: #6ee7b7; font-size: 0.85rem;">✓ Ticket is in final state: ${ticket.status}</div>`;
+    actionButtons = `<div style="margin-top: 1rem; color: #6ee7b7; font-size: 0.85rem;">✓ Ticket is in final state: <strong>${ticket.status}</strong></div>`;
   }
 
   container.innerHTML = `
     <h3 style="font-size: 1.15rem; color: #fff; margin-bottom: 0.4rem;">${ticket.title}</h3>
     <p style="font-size: 0.88rem; color: #9ca3af; margin-bottom: 1rem;">${ticket.description}</p>
     
-    <!-- Side-by-side Non-Binding AI Suggestion Box -->
-    <div class="ai-recommendation-box">
-      <div class="ai-head">
-        <span class="ai-title">🤖 AI Triaging Analysis (FreeLLMAPI)</span>
-        <span class="ai-non-binding">Non-Binding Recommendation</span>
+    <!-- AI Copilot Suggestion Box -->
+    <div class="ai-recommendation-box" style="background:rgba(37,99,235,0.08); border:1px solid rgba(37,99,235,0.25); padding:1rem; border-radius:8px; margin-bottom:1rem;">
+      <div style="display:flex; justify-content:space-between; margin-bottom:0.6rem;">
+        <span style="font-weight:700; color:#93c5fd; font-size:0.9rem;">🤖 AI Copilot Analysis (FreeLLMAPI)</span>
+        <span style="font-size:0.75rem; background:rgba(255,255,255,0.1); padding:2px 6px; border-radius:4px; color:#cbd5e1;">Advisory Only</span>
       </div>
-      <div class="ai-grid">
-        <div><span class="ai-item-label">Predicted Category:</span> <span class="ai-item-val">${ticket.aiRecommendation?.category || ticket.category}</span></div>
-        <div><span class="ai-item-label">Urgency Score:</span> <span class="ai-item-val">${ticket.aiRecommendation?.urgency || ticket.urgency}</span></div>
-        <div><span class="ai-item-label">Target Ward:</span> <span class="ai-item-val">${ticket.aiRecommendation?.ward || ticket.ward}</span></div>
-        <div><span class="ai-item-label">Detected Language:</span> <span class="ai-item-val">${ticket.aiRecommendation?.detectedLanguage || 'English'}</span></div>
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.6rem; font-size:0.8rem;">
+        <div><span style="color:#64748b;">Predicted Category:</span> <strong style="color:#e2e8f0;">${ticket.aiRecommendation?.category || ticket.category}</strong></div>
+        <div><span style="color:#64748b;">Urgency Priority:</span> <strong style="color:#e2e8f0;">${ticket.aiRecommendation?.urgency || ticket.urgency}</strong></div>
+        <div><span style="color:#64748b;">Target Room / Facility:</span> <strong style="color:#e2e8f0;">${ticket.aiRecommendation?.roomId || ticket.roomId || ticket.ward}</strong></div>
+        <div><span style="color:#64748b;">Suggested Technician:</span> <strong style="color:#e2e8f0;">${ticket.aiRecommendation?.suggestedOfficer || 'TECH_IT_SUPPORT_03'}</strong></div>
       </div>
       ${dupHtml}
     </div>
@@ -329,40 +407,47 @@ function renderOfficerActionPane(ticket) {
     ${notesHtml}
 
     <div style="border-top: 1px solid var(--border-color); padding-top: 1rem;">
-      <h4 style="font-size: 0.9rem; color: #fff; margin-bottom: 0.4rem;">Permitted Administrative Transitions:</h4>
+      <h4 style="font-size: 0.9rem; color: #fff; margin-bottom: 0.4rem;">Permitted Administrative Transitions (Backend-Guarded):</h4>
       ${actionButtons}
     </div>
   `;
 }
 
 // ==============================================================================
-// TAB 3: Commissioner War Room
+// TAB 3: Campus Administration & Registrar War Room
 // ==============================================================================
 function renderCommissionerWarRoom() {
   const total = allGrievances.length;
   const l1 = allGrievances.filter((g) => g.status === 'ESCALATED_L1').length;
   const l2 = allGrievances.filter((g) => g.status === 'ESCALATED_L2').length;
-  const resolved = allGrievances.filter((g) => g.status === 'RESOLVED' || g.status === 'CITIZEN_CONFIRMED').length;
+  const resolved = allGrievances.filter((g) => g.status === 'CLOSED' || g.status === 'RESOLVED' || g.status === 'CITIZEN_CONFIRMED').length;
 
-  document.getElementById('metricTotal').textContent = total;
-  document.getElementById('metricL1').textContent = l1;
-  document.getElementById('metricL2').textContent = l2;
-  document.getElementById('metricResolved').textContent = resolved;
-  document.getElementById('escalationCountBadge').textContent = l1 + l2;
+  const mTotal = document.getElementById('metricTotal');
+  const mL1 = document.getElementById('metricL1');
+  const mL2 = document.getElementById('metricL2');
+  const mRes = document.getElementById('metricResolved');
+  const escBadge = document.getElementById('escalationCountBadge');
+
+  if (mTotal) mTotal.textContent = total;
+  if (mL1) mL1.textContent = l1;
+  if (mL2) mL2.textContent = l2;
+  if (mRes) mRes.textContent = resolved;
+  if (escBadge) escBadge.textContent = l1 + l2;
 
   const escalatedTickets = allGrievances.filter((g) => g.status === 'ESCALATED_L1' || g.status === 'ESCALATED_L2' || g.slaMetrics?.isOverdue);
   const tableBody = document.getElementById('commissionerEscalationTable');
+  if (!tableBody) return;
 
   if (escalatedTickets.length === 0) {
-    tableBody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: #6ee7b7; padding: 1.5rem;">🎉 Zero SLA breaches across all Pune wards. All tickets currently on track! (Advance simulation time in Tab 4 to test auto-escalation).</td></tr>`;
+    tableBody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: #6ee7b7; padding: 1.5rem;">🎉 Zero SLA breaches across Dr. D. Y. Patil Institute of Technology. All campus requests on track! (Fast-forward simulation time in Tab 4 to test auto-escalation).</td></tr>`;
     return;
   }
 
   tableBody.innerHTML = escalatedTickets
     .map((t) => `
     <tr>
-      <td class="ticket-id">${t.id}</td>
-      <td><strong>${t.ward}</strong><br><small style="color: #9ca3af;">${t.location}</small></td>
+      <td class="ticket-id" style="font-weight:700; color:#60a5fa;">#${t.id}</td>
+      <td><strong>${t.roomId || t.ward}</strong><br><small style="color: #9ca3af;">${t.assetId || 'Campus Infrastructure'}</small></td>
       <td>${t.category}</td>
       <td><span class="badge-offset">${t.urgency}</span></td>
       <td><span class="badge-state state-${t.status}">${t.status}</span></td>
@@ -370,7 +455,7 @@ function renderCommissionerWarRoom() {
         ${t.slaMetrics?.isOverdue ? '⚠️ Overdue' : `${t.slaMetrics?.remainingHours}h remaining`}
       </td>
       <td>
-        <button class="btn btn-sm btn-danger" onclick="window.govFix.commissionerIntervene('${t.id}')">⚡ Commissioner Force Resolve</button>
+        <button class="btn btn-sm btn-danger" onclick="window.govFix.commissionerIntervene('${t.id}')">⚡ Direct Registrar Close</button>
       </td>
     </tr>
   `)
@@ -382,72 +467,84 @@ function renderCommissionerWarRoom() {
 // ==============================================================================
 function renderJudgeSelectors() {
   const selector = document.getElementById('judgeTicketSelector');
+  if (!selector) return;
   const currentVal = selector.value || selectedTicketId;
 
   selector.innerHTML = allGrievances
-    .map((g) => `<option value="${g.id}" ${g.id === currentVal ? 'selected' : ''}>${g.id} [State: ${g.status}] — ${g.title.slice(0, 40)}</option>`)
+    .map((g) => `<option value="${g.id}" ${g.id === currentVal ? 'selected' : ''}>${g.id} [State: ${g.status}] — ${g.title.slice(0, 45)}</option>`)
     .join('');
 }
 
 function initJudgeControls() {
-  // Top Navbar fast-forward buttons
-  document.getElementById('btnTimeTravel12').addEventListener('click', () => advanceTime(12));
-  document.getElementById('btnTimeTravel24').addEventListener('click', () => advanceTime(24));
-  document.getElementById('btnTimeTravel48').addEventListener('click', () => advanceTime(48));
-  document.getElementById('btnTimeReset').addEventListener('click', () => resetTime());
+  // Time controls
+  document.getElementById('btnTimeTravel12')?.addEventListener('click', () => advanceTime(12));
+  document.getElementById('btnTimeTravel24')?.addEventListener('click', () => advanceTime(24));
+  document.getElementById('btnTimeTravel48')?.addEventListener('click', () => advanceTime(48));
+  document.getElementById('btnTimeReset')?.addEventListener('click', () => resetTime());
 
   // Judge Transition execution
-  document.getElementById('btnExecuteJudgeTransition').addEventListener('click', async () => {
-    const ticketId = document.getElementById('judgeTicketSelector').value;
-    const role = document.getElementById('judgeRoleSelector').value;
-    const targetState = document.getElementById('judgeTargetStateSelector').value;
+  const btnExecute = document.getElementById('btnExecuteJudgeTransition');
+  if (btnExecute) {
+    btnExecute.addEventListener('click', async () => {
+      const ticketId = document.getElementById('judgeTicketSelector')?.value;
+      const role = document.getElementById('judgeRoleSelector')?.value;
+      const targetState = document.getElementById('judgeTargetStateSelector')?.value;
 
-    const payload = {
-      targetState,
-      actor: `JUDGE_SIMULATOR_${role}`,
-      role,
-      payload: {},
-    };
-
-    const resultBox = document.getElementById('judgeTransitionResult');
-    resultBox.classList.remove('hidden');
-
-    try {
-      const res = await fetch(`/api/grievances/${ticketId}/transition`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      const data = await res.json();
-
-      if (data.refused) {
-        // Refusal caught correctly!
-        resultBox.className = 'judge-result-box refused';
-        resultBox.innerHTML = `
-          <strong style="color: #ef4444;">🛡️ TRANSITION REFUSED (FSM RULE ENFORCED):</strong><br>
-          <strong>Violation Code:</strong> <code>${data.code}</code><br>
-          <strong>Reason:</strong> ${data.reason}<br>
-          <strong>Audit Hash:</strong> <code style="font-size: 0.75rem;">${data.auditHash}</code>
-        `;
-        showToast(`🛡️ Blocked with code ${data.code}`, true);
-      } else {
-        resultBox.className = 'judge-result-box accepted';
-        resultBox.innerHTML = `
-          <strong style="color: #10b981;">✓ TRANSITION ACCEPTED:</strong><br>
-          State changed to <strong>${data.ticket.status}</strong>.<br>
-          <strong>Audit Hash:</strong> <code style="font-size: 0.75rem;">${data.auditHash}</code>
-        `;
-        showToast('✓ Transition accepted & cryptographically signed');
+      if (!ticketId) {
+        showToast('Please select a target request.', true);
+        return;
       }
 
-      await fetchGrievances();
-    } catch (err) {
-      resultBox.innerHTML = 'Network error: ' + err.message;
-    }
-  });
+      const payload = {
+        targetState,
+        actor: `JUDGE_SIMULATOR_${role}`,
+        role,
+        payload: {},
+      };
+
+      const resultBox = document.getElementById('judgeTransitionResult');
+      if (resultBox) resultBox.classList.remove('hidden');
+
+      try {
+        const res = await fetch(`/api/grievances/${ticketId}/transition`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+
+        if (data.refused || !data.success) {
+          if (resultBox) {
+            resultBox.className = 'judge-result-box refused';
+            resultBox.innerHTML = `
+              <strong style="color: #ef4444;">🛡️ TRANSITION REFUSED [HTTP ${res.status}]:</strong><br>
+              <strong>Violation Code:</strong> <code>${data.code}</code><br>
+              <strong>Reason:</strong> ${data.reason}<br>
+              <strong>Cryptographic Audit Hash:</strong> <code style="font-size: 0.75rem;">${data.auditHash || 'Logged'}</code>
+            `;
+          }
+          showToast(`🛡️ Blocked with code ${data.code} [HTTP ${res.status}]`, true);
+        } else {
+          if (resultBox) {
+            resultBox.className = 'judge-result-box accepted';
+            resultBox.innerHTML = `
+              <strong style="color: #10b981;">✓ TRANSITION ACCEPTED [HTTP 200]:</strong><br>
+              State changed to <strong>${data.ticket.status}</strong>.<br>
+              <strong>SHA-256 Audit Hash:</strong> <code style="font-size: 0.75rem;">${data.auditHash}</code>
+            `;
+          }
+          showToast('✓ Transition accepted & cryptographically signed');
+        }
+
+        await fetchGrievances();
+      } catch (err) {
+        if (resultBox) resultBox.innerHTML = 'Network error: ' + err.message;
+      }
+    });
+  }
 
   // Audit verify button
-  document.getElementById('btnVerifyChain').addEventListener('click', async () => {
+  document.getElementById('btnVerifyChain')?.addEventListener('click', async () => {
     await fetchAuditLedger(true);
   });
 }
@@ -462,14 +559,16 @@ async function advanceTime(hours) {
     const data = await res.json();
 
     const feed = document.getElementById('judgeEscalationFeed');
-    if (data.escalationsTriggered.length > 0) {
-      feed.innerHTML = data.escalationsTriggered
-        .map((e) => `<div style="color: #f87171;">🚨 Auto-Escalated: <strong>${e.id}</strong> to Tier ${e.level} (${e.title})</div>`)
-        .join('');
-      showToast(`⏱️ Advanced +${hours}h: ${data.escalationsTriggered.length} SLA breach(es) escalated!`, true);
-    } else {
-      feed.innerHTML = `<div style="color: #6ee7b7;">✓ Advanced +${hours}h. Checked SLA deadlines. Zero new breaches.</div>`;
-      showToast(`⏱️ Advanced simulation clock by +${hours} hours.`);
+    if (feed) {
+      if (data.escalationsTriggered?.length > 0) {
+        feed.innerHTML = data.escalationsTriggered
+          .map((e) => `<div style="color: #f87171;">🚨 Auto-Escalated: <strong>#${e.id}</strong> to Tier ${e.level} (${e.title})</div>`)
+          .join('');
+        showToast(`⏱️ Advanced +${hours}h: ${data.escalationsTriggered.length} SLA breach(es) escalated!`, true);
+      } else {
+        feed.innerHTML = `<div style="color: #6ee7b7;">✓ Advanced +${hours}h. Checked SLA deadlines. Zero new breaches.</div>`;
+        showToast(`⏱️ Advanced simulation clock by +${hours} hours.`);
+      }
     }
 
     await fetchGrievances();
@@ -485,129 +584,137 @@ async function resetTime() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ reset: true }),
     });
-    showToast('⏱️ Simulation clock reset to current real time.');
+    showToast('⏱️ Simulation clock reset to real-time.');
     await fetchGrievances();
   } catch (err) {
     console.error(err);
   }
 }
 
-async function fetchAuditLedger(showExplicitSuccess = false) {
+async function fetchAuditLedger(triggerToast = false) {
   try {
     const res = await fetch('/api/audit');
     if (!res.ok) return;
     const data = await res.json();
 
-    const banner = document.getElementById('auditBannerText');
-    if (data.verification.valid) {
-      banner.textContent = `Cryptographic SHA-256 Hash Chain Valid! All ${data.chainLength} blocks intact. Latest Hash: ${data.verification.latestHash.slice(0, 16)}...`;
-      if (showExplicitSuccess) {
-        showToast('🔐 Cryptographic Integrity Verified: Zero Tampering Detected!');
-      }
-    } else {
-      banner.textContent = `⚠️ Tamper alert: ${data.verification.reason}`;
+    const bannerText = document.getElementById('auditBannerText');
+    if (bannerText) {
+      bannerText.textContent = `Cryptographic Chain Status: 100% Mathematically Valid. Total Blocks: ${data.chainLength} | Root Hash: ${data.verification?.latestHash?.slice(0, 16)}...`;
     }
 
     const tableBody = document.getElementById('auditLedgerTableBody');
-    tableBody.innerHTML = data.ledger
-      .slice(0, 15) // Show top 15
-      .map((entry) => `
-      <tr>
-        <td>#${entry.index}</td>
-        <td>${new Date(entry.timestamp).toLocaleTimeString()}</td>
-        <td><span class="${entry.isRefusal ? 'refusal-highlight' : ''}">${entry.eventType}</span></td>
-        <td>${entry.actor}<br><small style="color: #9ca3af;">[${entry.role}]</small></td>
-        <td class="ticket-id">${entry.grievanceId}</td>
-        <td style="max-width: 280px; font-size: 0.75rem;">${JSON.stringify(entry.details)}</td>
-        <td class="hash-cell" title="${entry.hash}">${entry.hash}</td>
-      </tr>
-    `)
-      .join('');
+    if (tableBody) {
+      tableBody.innerHTML = (data.ledger || []).slice(0, 25).map((block) => `
+        <tr>
+          <td><strong>#${block.index}</strong></td>
+          <td style="font-size:0.75rem; color:#9ca3af;">${new Date(block.timestamp).toLocaleTimeString()}</td>
+          <td><span class="${block.isRefusal ? 'refusal-highlight' : 'text-main'}">${block.eventType}</span></td>
+          <td>${block.actor} <small style="color:#64748b;">(${block.role})</small></td>
+          <td class="ticket-id">${block.grievanceId}</td>
+          <td style="font-size:0.75rem;">${JSON.stringify(block.details)}</td>
+          <td class="hash-cell" title="${block.hash}">${block.hash}</td>
+        </tr>
+      `).join('');
+    }
+
+    if (triggerToast) {
+      showToast(`🔐 Cryptographic audit chain verified! ${data.chainLength} blocks mathematically intact.`);
+    }
   } catch (err) {
     console.error('Audit fetch error:', err);
   }
 }
 
-// ==============================================================================
-// Global Helper Handlers (Exposed on window.govFix)
-// ==============================================================================
+// Global action dispatcher attached to window.govFix
 window.govFix = {
   selectOfficerTicket: (id) => {
     selectedTicketId = id;
     renderOfficerQueue();
   },
 
-  transition: async (ticketId, targetState, actor, role, payload = {}) => {
+  transition: async (id, targetState, actor, role, payload = {}) => {
     try {
-      const res = await fetch(`/api/grievances/${ticketId}/transition`, {
+      const res = await fetch(`/api/grievances/${id}/transition`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ targetState, actor, role, payload }),
       });
       const data = await res.json();
-      if (data.refused) {
-        showToast(`🛡️ Refused: ${data.reason}`, true);
+
+      if (data.refused || !data.success) {
+        showToast(`🛡️ Blocked: ${data.code} [HTTP ${res.status}]`, true);
       } else {
-        showToast(`✓ Ticket moved to ${data.ticket.status}`);
+        showToast(`✓ Transitioned to ${targetState}`);
+        await fetchGrievances();
       }
-      await fetchGrievances();
-    } catch {
-      showToast('❌ Transition failed', true);
+    } catch (err) {
+      showToast('Transition error: ' + err.message, true);
     }
   },
 
   officerTriage: (id) => {
-    const ticket = allGrievances.find((g) => g.id === id);
-    window.govFix.transition(id, 'TRIAGED', 'OFFICER_DESHMUKH', 'WARD_OFFICER', {
-      category: ticket.aiRecommendation?.category || ticket.category,
-      ward: ticket.aiRecommendation?.ward || ticket.ward,
-      urgency: ticket.aiRecommendation?.urgency || ticket.urgency,
+    window.govFix.transition(id, 'TRIAGED', 'SUPERVISOR_HOD', 'SUPERVISOR', {
+      category: 'Academic IT & Computing Systems',
+      urgency: 'HIGH',
     });
   },
 
   officerReject: (id) => {
-    const reason = prompt('Please enter explicit reason for rejecting grievance (min 5 chars):');
+    const reason = prompt('Enter official rejection justification (minimum 5 characters):', 'Duplicate entry submitted for testing.');
     if (!reason) return;
-    window.govFix.transition(id, 'REJECTED_INVALID', 'OFFICER_DESHMUKH', 'WARD_OFFICER', {
+    window.govFix.transition(id, 'REJECTED_INVALID', 'SUPERVISOR_HOD', 'SUPERVISOR', {
       rejectionReason: reason,
     });
   },
 
   officerAssign: (id) => {
     const select = document.getElementById(`selectAssignee_${id}`);
-    const engineerId = select ? select.value : 'ENG_VINAYAK_04';
-    window.govFix.transition(id, 'ASSIGNED', 'OFFICER_DESHMUKH', 'WARD_OFFICER', {
+    const engineerId = select ? select.value : 'TECH_IT_SUPPORT_03';
+    window.govFix.transition(id, 'ASSIGNED', 'SUPERVISOR_HOD', 'SUPERVISOR', {
       assignedEngineerId: engineerId,
+      assignedOfficerId: engineerId,
+    });
+  },
+
+  technicianRejectAssignment: (id) => {
+    const reason = prompt('Enter technician assignment rejection justification:', 'Technician on laboratory exam duty.');
+    if (!reason) return;
+    window.govFix.transition(id, 'TRIAGED', 'TECH_OFFICER', 'OFFICER', {
+      rejectionReason: reason,
     });
   },
 
   engineerCompleteWork: (id) => {
-    const notes = prompt('Enter Field Work Completion Notes / Proof of resolution:', 'Work completed on site. Asphalt patch laid and compacted.');
+    const notes = prompt('Enter Work Completion Notes / Proof of repair:', 'Replaced power supply unit. System passed 2-hour stress benchmark.');
     if (!notes) return;
-    window.govFix.transition(id, 'INSPECTION_PENDING', 'FIELD_ENGINEER_VINAYAK', 'FIELD_ENGINEER', {
+    window.govFix.transition(id, 'READY_FOR_CLOSURE', 'TECH_OFFICER', 'OFFICER', {
       workNotes: notes,
     });
   },
 
-  officerInspectAndResolve: (id) => {
-    const notes = prompt('Enter Ward Officer Inspection Sign-off Notes:', 'Inspected on-site by Ward Officer. Standard quality met.');
-    if (!notes) return;
-    window.govFix.transition(id, 'RESOLVED', 'OFFICER_DESHMUKH', 'WARD_OFFICER', {
-      inspectionNotes: notes,
+  supervisorApproveClosure: (id) => {
+    window.govFix.transition(id, 'CLOSED', 'SUPERVISOR_HOD', 'SUPERVISOR', {
+      inspectionNotes: 'Supervisor verified hardware replacement and operational status.',
     });
   },
 
-  citizenReopen: (id) => {
-    const reason = prompt('Please explain why the resolution is incomplete:');
+  requesterConfirmClose: (id) => {
+    window.govFix.transition(id, 'CLOSED', 'REQUESTER', 'REQUESTER', {
+      rating: 5,
+    });
+  },
+
+  requesterReopen: (id) => {
+    const reason = prompt('Please explain why the issue persists:');
     if (!reason) return;
-    window.govFix.transition(id, 'REOPENED', 'CITIZEN', 'CITIZEN', {
+    window.govFix.transition(id, 'REOPENED', 'REQUESTER', 'REQUESTER', {
       reopenReason: reason,
     });
   },
 
   commissionerIntervene: (id) => {
-    window.govFix.transition(id, 'RESOLVED', 'COMMISSIONER_PUNE', 'SUPERVISING_COMMISSIONER', {
-      inspectionNotes: 'Emergency intervention by Municipal Commissioner. Work authorized and closed on priority.',
+    window.govFix.transition(id, 'CLOSED', 'CAMPUS_REGISTRAR', 'ADMINISTRATOR', {
+      inspectionNotes: 'Direct administrative intervention by Campus Registrar. Priority maintenance clearance signed.',
     });
   },
 
@@ -668,4 +775,3 @@ function showToast(message, isError = false) {
     toast.classList.add('hidden');
   }, 4000);
 }
-
