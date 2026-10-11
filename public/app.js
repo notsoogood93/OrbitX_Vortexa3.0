@@ -14,6 +14,7 @@ let currentEvidence = {};
 
 // Initialize on DOM Ready
 document.addEventListener('DOMContentLoaded', () => {
+  initThemeToggle();
   initTabs();
   initFormListeners();
   initSearchFilter();
@@ -27,6 +28,43 @@ document.addEventListener('DOMContentLoaded', () => {
   // Polling every 10 seconds for real-time updates
   setInterval(fetchGrievances, 10000);
 });
+
+// ==============================================================================
+// Theme Toggle (Dark / Light System - MEMORY-main Standard)
+// ==============================================================================
+function initThemeToggle() {
+  const savedTheme = localStorage.getItem('govfix-theme') || 'dark';
+  applyTheme(savedTheme);
+
+  const toggleBtn = document.getElementById('themeToggleBtn');
+  if (toggleBtn) {
+    toggleBtn.addEventListener('click', () => {
+      const current = document.documentElement.getAttribute('data-theme') || 'dark';
+      const nextTheme = current === 'dark' ? 'light' : 'dark';
+      applyTheme(nextTheme);
+      showToast(`Theme switched to ${nextTheme === 'dark' ? 'Dark' : 'Light'} Mode`);
+    });
+  }
+}
+
+function applyTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  localStorage.setItem('govfix-theme', theme);
+
+  const iconSun = document.getElementById('themeIconSun');
+  const iconMoon = document.getElementById('themeIconMoon');
+  const label = document.getElementById('themeToggleLabel');
+
+  if (theme === 'light') {
+    if (iconSun) iconSun.classList.add('hidden');
+    if (iconMoon) iconMoon.classList.remove('hidden');
+    if (label) label.textContent = 'Dark';
+  } else {
+    if (iconSun) iconSun.classList.remove('hidden');
+    if (iconMoon) iconMoon.classList.add('hidden');
+    if (label) label.textContent = 'Light';
+  }
+}
 
 // ==============================================================================
 // Tab Navigation & Keyboard Shortcuts
@@ -74,6 +112,15 @@ function initKeyboardShortcuts() {
         searchInput.focus();
         searchInput.select();
       }
+    }
+
+    // Alt+T: Quick Theme Toggle
+    if (e.altKey && (e.key === 't' || e.key === 'T')) {
+      e.preventDefault();
+      const current = document.documentElement.getAttribute('data-theme') || 'dark';
+      const nextTheme = current === 'dark' ? 'light' : 'dark';
+      applyTheme(nextTheme);
+      showToast(`Theme switched to ${nextTheme === 'dark' ? 'Dark' : 'Light'} Mode`);
     }
 
     // Alt+1 to Alt+4: Direct Tab Switching

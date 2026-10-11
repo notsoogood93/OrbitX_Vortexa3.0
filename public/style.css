@@ -35,6 +35,161 @@
   --radius-lg: 14px;
 }
 
+/* ==============================================================================
+   Light Theme System (MEMORY-main Clean Design Standard)
+   ============================================================================== */
+[data-theme="light"] {
+  --bg-canvas: #f1f5f9;
+  --bg-surface: #ffffff;
+  --bg-card: rgba(255, 255, 255, 0.95);
+  --bg-card-hover: #f8fafc;
+  --bg-input: #ffffff;
+
+  --border-subtle: rgba(0, 0, 0, 0.08);
+  --border-focus: rgba(37, 99, 235, 0.6);
+  --border-light: rgba(0, 0, 0, 0.12);
+
+  --text-main: #0f172a;
+  --text-muted: #475569;
+  --text-dim: #64748b;
+
+  --accent-primary: #2563eb;
+  --accent-primary-hover: #1d4ed8;
+  --accent-emerald: #059669;
+  --accent-amber: #d97706;
+  --accent-rose: #dc2626;
+  --accent-violet: #7c3aed;
+}
+
+[data-theme="light"] body {
+  background-color: var(--bg-canvas);
+  background-image: 
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(37, 99, 235, 0.06), transparent 70%),
+    radial-gradient(ellipse 60% 40% at 90% 100%, rgba(124, 58, 237, 0.04), transparent 70%);
+}
+
+[data-theme="light"] .navbar {
+  background: rgba(255, 255, 255, 0.92);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+[data-theme="light"] .tabs-container {
+  background: rgba(241, 245, 249, 0.92);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+[data-theme="light"] .tab-btn {
+  color: #64748b;
+}
+
+[data-theme="light"] .tab-btn.active {
+  color: #0f172a;
+  border-bottom-color: var(--accent-primary);
+}
+
+[data-theme="light"] .card {
+  background: var(--bg-card);
+  border-color: var(--border-subtle);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="light"] .sim-clock-capsule {
+  background: #ffffff;
+  border-color: var(--border-subtle);
+}
+
+[data-theme="light"] .data-table th {
+  background: #f8fafc;
+  color: #475569;
+}
+
+[data-theme="light"] .data-table tr {
+  border-bottom-color: rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="light"] .data-table tr:hover {
+  background: rgba(241, 245, 249, 0.6);
+}
+
+[data-theme="light"] .form-input,
+[data-theme="light"] .form-textarea,
+[data-theme="light"] .form-select {
+  background: #ffffff;
+  color: #0f172a;
+  border-color: rgba(0, 0, 0, 0.15);
+}
+
+[data-theme="light"] .ticket-card-item {
+  background: #ffffff;
+  border-color: var(--border-subtle);
+}
+
+[data-theme="light"] .ticket-card-item:hover {
+  background: #f8fafc;
+}
+
+[data-theme="light"] .ticket-card-item.selected {
+  background: #eff6ff;
+  border-color: var(--accent-primary);
+}
+
+[data-theme="light"] .ticket-item-card {
+  background: #ffffff;
+  border-color: var(--border-subtle);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="light"] .ticket-title {
+  color: #0f172a !important;
+}
+
+[data-theme="light"] .ticket-desc {
+  color: #475569 !important;
+}
+
+[data-theme="light"] .modal-card {
+  background: #ffffff;
+  border-color: rgba(0, 0, 0, 0.12);
+  color: #0f172a;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+/* Theme Toggle Button Component */
+.theme-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: var(--bg-surface);
+  color: var(--text-muted);
+  border: 1px solid var(--border-light);
+  padding: 0.4rem 0.7rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 600;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
+}
+
+.theme-toggle-btn:hover {
+  color: var(--text-main);
+  background: var(--bg-card-hover);
+  border-color: var(--border-focus);
+  transform: translateY(-1px);
+}
+
+.theme-toggle-btn:active {
+  transform: scale(0.97);
+}
+
+.theme-icon {
+  transition: transform 0.25s ease;
+}
+
+.theme-toggle-btn:hover .theme-icon {
+  transform: rotate(20deg);
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
