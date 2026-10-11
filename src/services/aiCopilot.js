@@ -27,7 +27,7 @@ const CATEGORIES = [
 export class AICopilotService {
   constructor(options = {}) {
     this.routerBaseUrl = options.baseUrl || process.env.FREELLMAPI_URL || 'http://localhost:3001/v1';
-    this.apiKey = options.apiKey || process.env.FREELLMAPI_API_KEY || 'freellmapi-local';
+    this.apiKey = options.apiKey || process.env.FREELLMAPI_API_KEY || 'freellmapi-f7137a5650227eb69df9e3a9e17eed46cdb1bb7f8f17e331';
   }
 
   /**
