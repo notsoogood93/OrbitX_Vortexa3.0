@@ -120,10 +120,23 @@ In strict compliance with hackathon correctness rules (*"AI may inform decisions
 
 ---
 
+## 📚 Documentation & Specifications Suite
+
+Complete institutional-grade specifications developed for the evaluation jury:
+1. [IEEE 830 Software Requirements Specification (SRS)](file:///c:/Users/SHRIKRISHNA/pune/OrbitX_Vortexa3.0/docs/SRS.md)
+2. [Product Requirements Document (PRD)](file:///c:/Users/SHRIKRISHNA/pune/OrbitX_Vortexa3.0/docs/PRD.md)
+3. [REST API Contracts & Refusal Codes](file:///c:/Users/SHRIKRISHNA/pune/OrbitX_Vortexa3.0/docs/API_CONTRACTS.md)
+4. [3-Minute Live Hackathon Demo Script](file:///c:/Users/SHRIKRISHNA/pune/OrbitX_Vortexa3.0/docs/DEMO_SCRIPT.md)
+5. [10-Slide Pitch Deck for Jury](file:///c:/Users/SHRIKRISHNA/pune/OrbitX_Vortexa3.0/docs/PITCH_DECK.md)
+
+---
+
 ## 📂 Implementation Roadmap (12-Hour Timeline)
 
 - [x] **Hour 1**: Problem statement selection, workflow architecture, state machine definition, repository bootstrapping.
-- [ ] **Hours 2–4**: Core FSM engine, role guard middleware, SLA calculation daemon, and tamper-evident audit logger.
-- [ ] **Hours 5–7**: FreeLLMAPI AI sidecar integration (multilingual extraction, duplicate cluster analysis, drafting).
-- [ ] **Hours 8–10**: Interactive Web Dashboard (Citizen View, Officer Queue, Commissioner War Room, and Judge Time-Travel Simulator).
-- [ ] **Hours 11–12**: End-to-end integration tests, edge case verification (refusals, out-of-order attempts), final presentation polish.
+- [x] **Hours 2–3**: Core deterministic FSM engine, role-guarded middleware, dynamic SLA time-travel daemon, and tamper-evident SHA-256 audit ledger.
+- [x] **Hours 4–5**: FreeLLMAPI AI sidecar integration (multilingual Marathi/Hindi extraction, heuristics fallback, action drafter).
+- [x] **Hours 6–8**: 4-in-1 Interactive Web Dashboard (Citizen Portal, Ward Officer Desk, Commissioner War Room, and Judge Chaos Simulator).
+- [x] **Hours 9–10**: Automated 8-point verification test suite (`npm test`), edge-case refusal validation, documentation suite, and pitch deck.
+- [ ] **Hours 11–12**: Final jury rehearsal, live deployment bundle validation, and submission sign-off.
+
