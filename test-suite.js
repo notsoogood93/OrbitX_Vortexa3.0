@@ -318,6 +318,65 @@ async function runTests() {
       `10. SHA-256 Cryptographic Audit Ledger verified 100% Mathematically Valid (${auditData.chainLength} chained blocks)`
     );
 
+    // -------------------------------------------------------------------------
+    // TEST 11: Enterprise Telemetry & Health Endpoints (Architecture 08 Standard)
+    // -------------------------------------------------------------------------
+    const healthRes = await fetch(`${BASE_URL}/health`);
+    const healthData = await healthRes.json();
+    const metricsRes = await fetch(`${BASE_URL}/metrics`);
+    const metricsData = await metricsRes.json();
+
+    assert(
+      healthRes.status === 200 &&
+      healthData.status === 'healthy' &&
+      healthData.fsmEngine === 'ACTIVE' &&
+      metricsRes.status === 200 &&
+      metricsData.auditChainValid === true,
+      '11. Enterprise Telemetry (/health & /metrics) reports healthy subsystem status and active FSM/SLA engines'
+    );
+
+    // -------------------------------------------------------------------------
+    // TEST 12: Role-Based Authentication & Session Token Issuance (Table 5 Spec)
+    // -------------------------------------------------------------------------
+    const authRes = await fetch(`${BASE_URL}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        username: 'prof.kulkarni',
+        role: 'SUPERVISOR',
+      }),
+    });
+    const authData = await authRes.json();
+
+    assert(
+      authRes.status === 200 &&
+      authData.success === true &&
+      authData.role === 'SUPERVISOR' &&
+      Boolean(authData.sessionToken),
+      '12. Role-based Authentication (/auth/login) successfully generates authorized session credentials'
+    );
+
+    // -------------------------------------------------------------------------
+    // TEST 13: Authorized Officer Work Action Recording (Table 5 Spec)
+    // -------------------------------------------------------------------------
+    const actionRes = await fetch(`${BASE_URL}/requests/${testTicket.id}/actions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        actionType: 'DIAGNOSTIC_COMPLETED',
+        details: 'Checked Lab 304 GPU power rails with multimeter; 12V stable.',
+        actor: 'TECH_IT_SUPPORT_05',
+      }),
+    });
+    const actionData = await actionRes.json();
+
+    assert(
+      actionRes.status === 200 &&
+      actionData.success === true &&
+      Boolean(actionData.auditBlock?.hash || actionData.auditBlock?.blockHash),
+      '13. Officer Work Action (/requests/:id/actions) appended to audit log with SHA-256 block hash'
+    );
+
   } catch (err) {
     console.error('Fatal Test Exception:', err);
     failed++;

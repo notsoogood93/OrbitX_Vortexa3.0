@@ -17,6 +17,16 @@ const PORT = process.env.PORT || 4000;
 
 app.use(cors());
 app.use(express.json());
+app.use((err, req, res, next) => {
+  if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+    return res.status(400).json({
+      error: 'Malformed JSON payload',
+      code: 'ERR_MALFORMED_JSON',
+      message: err.message,
+    });
+  }
+  next();
+});
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Core Engine Instances
@@ -285,17 +295,23 @@ app.patch('/api/requests/:id/status', (req, res) => {
 
 // 0. User Authentication (Section 9.2 Table 5: POST /auth/login)
 const handleAuthLogin = (req, res) => {
-  const { email, role } = req.body || {};
-  const userRole = role || (email && email.includes('admin') ? ROLES.ADMINISTRATOR : email && email.includes('hod') ? ROLES.SUPERVISOR : email && email.includes('tech') ? ROLES.OFFICER : ROLES.REQUESTER);
+  const { email, username, role } = req.body || {};
+  const userRole = normalizeRole(role || (email && email.includes('admin') ? ROLES.ADMINISTRATOR : email && email.includes('hod') ? ROLES.SUPERVISOR : email && email.includes('tech') ? ROLES.OFFICER : ROLES.REQUESTER));
   const user = {
     id: `USR-${Math.floor(1000 + Math.random() * 9000)}`,
-    name: email ? email.split('@')[0].replace('.', ' ') : 'Campus User',
-    email: email || 'user@dypit.edu.in',
+    name: username || (email ? email.split('@')[0].replace('.', ' ') : 'Campus User'),
+    email: email || `${username || 'user'}@dypit.edu.in`,
     role: userRole,
     departmentId: 'DEPT-CAMPUS-MAINTENANCE',
-    token: `govfix-jwt-${Buffer.from(email || 'user').toString('base64')}`,
+    token: `govfix-jwt-${Buffer.from(email || username || 'user').toString('base64')}`,
   };
-  return res.json({ success: true, token: user.token, user });
+  return res.json({
+    success: true,
+    token: user.token,
+    sessionToken: user.token,
+    role: userRole,
+    user,
+  });
 };
 app.post('/api/auth/login', handleAuthLogin);
 app.post('/auth/login', handleAuthLogin);
@@ -341,7 +357,7 @@ const handleRecordAction = (req, res) => {
   ticket.actions.push(actionRecord);
   ticket.updatedAt = actionRecord.performedAt;
 
-  auditLedger.logEvent({
+  const auditBlock = auditLedger.logEvent({
     eventType: 'ACTION_RECORDED',
     actor: actionRecord.actor,
     role: actionRecord.role,
@@ -349,7 +365,7 @@ const handleRecordAction = (req, res) => {
     details: actionRecord,
   });
 
-  return res.json({ success: true, action: actionRecord, ticket });
+  return res.json({ success: true, action: actionRecord, ticket, auditBlock });
 };
 app.post('/api/requests/:id/actions', handleRecordAction);
 app.post('/requests/:id/actions', handleRecordAction);
@@ -500,17 +516,65 @@ app.post('/api/simulation/time-travel', (req, res) => {
 });
 
 /**
- * GET /api/audit
+ * GET /api/audit or GET /audit
  * Returns full audit chain and verifies mathematical SHA-256 hash integrity
  */
-app.get('/api/audit', (req, res) => {
+const handleAuditVerification = (req, res) => {
   const verification = auditLedger.verifyIntegrity();
   res.json({
     verification,
     chainLength: auditLedger.chain.length,
     ledger: auditLedger.chain.slice().reverse(), // Latest first
   });
-});
+};
+app.get('/api/audit', handleAuditVerification);
+app.get('/audit', handleAuditVerification);
+
+/**
+ * Enterprise Telemetry & Health Endpoints (Section 08 Architecture Standard)
+ */
+const handleHealthCheck = (req, res) => {
+  const auditStatus = auditLedger.verifyIntegrity();
+  res.json({
+    status: 'healthy',
+    uptimeSeconds: Math.floor(process.uptime()),
+    timestamp: slaManager.getCurrentTime().toISOString(),
+    institution: 'Dr. D. Y. Patil Institute of Technology',
+    track: 'University Service Requests',
+    version: '1.0.0',
+    fsmEngine: 'ACTIVE',
+    slaEngine: 'ACTIVE',
+    auditLedger: {
+      chainLength: auditLedger.chain.length,
+      isValid: auditStatus.isValid,
+      latestHash: auditStatus.latestHash,
+    },
+    activeTickets: grievances.length,
+    memoryUsageMB: (process.memoryUsage().rss / (1024 * 1024)).toFixed(1),
+  });
+};
+app.get('/health', handleHealthCheck);
+app.get('/api/health', handleHealthCheck);
+
+const handleMetrics = (req, res) => {
+  const statusCounts = {};
+  grievances.forEach((g) => {
+    statusCounts[g.status] = (statusCounts[g.status] || 0) + 1;
+  });
+  const auditMetrics = auditLedger.verifyIntegrity();
+
+  res.json({
+    totalTickets: grievances.length,
+    statusBreakdown: statusCounts,
+    auditChainLength: auditLedger.chain.length,
+    auditChainValid: auditMetrics.isValid,
+    virtualTimeOffsetHours: Number((slaManager.virtualTimeOffsetMs / 3600000).toFixed(1)),
+    totalEscalations: grievances.filter((g) => g.isEscalated || g.status.startsWith('ESCALATED')).length,
+  });
+};
+app.get('/metrics', handleMetrics);
+app.get('/api/metrics', handleMetrics);
+
 
 // Start Server
 app.listen(PORT, () => {

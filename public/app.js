@@ -18,6 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initFormListeners();
   initSearchFilter();
   initJudgeControls();
+  initKeyboardShortcuts();
   fetchGrievances();
 
   // Polling every 10 seconds for real-time updates
@@ -25,7 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ==============================================================================
-// Tab Navigation
+// Tab Navigation & Keyboard Shortcuts
 // ==============================================================================
 function initTabs() {
   const tabs = document.querySelectorAll('.tab-btn');
@@ -38,6 +39,49 @@ function initTabs() {
       const targetPane = document.getElementById(tab.dataset.tab);
       if (targetPane) targetPane.classList.add('active');
     });
+  });
+}
+
+function initKeyboardShortcuts() {
+  document.addEventListener('keydown', (e) => {
+    const isInputActive = ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName);
+
+    // Escape: Close Evidence Modal
+    if (e.key === 'Escape') {
+      const modal = document.getElementById('evidenceUploadModal');
+      if (modal && !modal.classList.contains('hidden')) {
+        window.govFix.closeEvidenceModal();
+      }
+    }
+
+    // Ctrl+Enter or Cmd+Enter: Quick Submit Form
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+      const form = document.getElementById('citizenComplaintForm');
+      if (form && document.activeElement && form.contains(document.activeElement)) {
+        e.preventDefault();
+        form.requestSubmit();
+      }
+    }
+
+    // Ctrl+K or '/' outside inputs: Quick Search
+    if ((e.ctrlKey && (e.key === 'k' || e.key === 'K')) || (!isInputActive && e.key === '/')) {
+      e.preventDefault();
+      const searchInput = document.getElementById('ticketSearchInput');
+      if (searchInput) {
+        searchInput.focus();
+        searchInput.select();
+      }
+    }
+
+    // Alt+1 to Alt+4: Direct Tab Switching
+    if (e.altKey && ['1', '2', '3', '4'].includes(e.key)) {
+      e.preventDefault();
+      const tabIndex = parseInt(e.key, 10) - 1;
+      const tabs = document.querySelectorAll('.tab-btn');
+      if (tabs[tabIndex]) {
+        tabs[tabIndex].click();
+      }
+    }
   });
 }
 
